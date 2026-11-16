@@ -13,6 +13,7 @@ trackmap/
 pacenotes/
 tracknotes/
 carsetups/
+telemetry/
 
 # pipenv stuff
 Pipfile

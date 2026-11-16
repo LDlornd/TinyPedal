@@ -23,7 +23,15 @@ API data reader (abstract class)
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import NamedTuple
+from typing import Callable, NamedTuple
+
+
+class TelemetryFrame(NamedTuple):
+    """一次采样的源时钟、重置计数及通道；不可用通道用 None 表达。"""
+
+    source_time_s: float
+    generation: int
+    channels: dict[str, float | int | bool | None]
 
 
 class APIDataReader(NamedTuple):
@@ -42,6 +50,7 @@ class APIDataReader(NamedTuple):
         tyre: Tyre (front left, front right, rear left, rear right)
         vehicle: Vehicle
         wheel: Wheel & suspension (front left, front right, rear left, rear right)
+        capture: Optional complete telemetry snapshot provider for driving export.
     """
 
     state: State
@@ -56,6 +65,7 @@ class APIDataReader(NamedTuple):
     tyre: Tyre
     vehicle: Vehicle
     wheel: Wheel
+    capture: Callable[[], TelemetryFrame | None] | None = None
 
 
 class State(ABC):

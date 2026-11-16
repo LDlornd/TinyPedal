@@ -33,6 +33,7 @@ from .about import About
 from .brake_editor import BrakeEditor
 from .config import FontConfig, UserConfig
 from .driver_stats_viewer import DriverStatsViewer
+from .driving_recording import DrivingRecording
 from .fuel_calculator import FuelCalculator
 from .heatmap_editor import HeatmapEditor
 from .log_info import LogInfo
@@ -571,6 +572,10 @@ class ToolsMenu(QMenu):
         super().__init__(title, parent)
         self._parent = parent
 
+        driving_recorder = self.addAction(tr("Driving Data Recorder"))
+        driving_recorder.triggered.connect(self.open_driving_recorder)
+        self.addSeparator()
+
         utility_fuelcalc = self.addAction(tr("Fuel Calculator"))
         utility_fuelcalc.triggered.connect(self.open_utility_fuelcalc)
 
@@ -609,6 +614,11 @@ class ToolsMenu(QMenu):
         """Fuel calculator"""
         _dialog = FuelCalculator(self._parent)
         _dialog.show()
+
+    def open_driving_recorder(self):
+        """打开驾驶记录窗口，复用同一个应用级记录器。"""
+        dialog = DrivingRecording(self._parent)
+        dialog.show()
 
     def open_utility_tyreplanner(self):
         """Tyre strategy planner"""

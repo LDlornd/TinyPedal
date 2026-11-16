@@ -90,6 +90,68 @@ class State(_reader.State, DataAdapter):
             return "LFS UDP: set track_name in API Options"
         return "OutSim 1ff" if snapshot.physics.inputs is not None else "OutSim legacy"
 
+    def capture(self) -> _reader.TelemetryFrame | None:
+        """导出使用同一物理快照；缺失通道保留 None，不使用显示兼容值。"""
+        snapshot = self.source.snapshot()
+        sim, gauge = snapshot.physics, snapshot.dashboard
+        if sim is None or not self.source.config["track_name"]:
+            return None
+        pedals = sim.inputs
+        capacity = self.source.config["fuel_capacity"]
+        length = self.source.config["track_length"]
+        values = {
+            "outsim_time_ms": sim.time_ms,
+            "outgauge_time_ms": gauge.time_ms if gauge else None,
+            "speed_m_s": math.sqrt(sum(value * value for value in sim.velocity)),
+            "gear": sim.gear if sim.gear is not None else (gauge.gear - 1 if gauge else None),
+            "rpm": sim.engine_rad_s * 30 / math.pi if sim.engine_rad_s is not None else (gauge.rpm if gauge else None),
+            "throttle_raw": pedals[0] if pedals else (gauge.throttle if gauge else None),
+            "brake_raw": pedals[1] if pedals else (gauge.brake if gauge else None),
+            "clutch_raw": pedals[3] if pedals else (gauge.clutch if gauge else None),
+            "steering": pedals[2] if pedals else None,
+            "handbrake": pedals[4] if pedals else None,
+            "fuel_fraction": gauge.fuel_fraction if gauge else None,
+            "fuel_l": gauge.fuel_fraction * capacity if gauge and capacity > 0 else None,
+            "water_temperature_c": gauge.water_c if gauge else None,
+            "oil_temperature_c": gauge.oil_c if gauge else None,
+            "steering_torque_nm": sim.steering_torque_nm,
+            "max_torque_at_rpm_nm": sim.max_torque_nm,
+            "lap_distance_m": sim.lap_distance_m,
+            "lap_progress": sim.lap_distance_m / length if sim.lap_distance_m is not None and length > 0 else None,
+            "indexed_distance_m": sim.indexed_distance_m,
+            "yaw_rad": sim.heading,
+            "map_x_m": -sim.position[0],
+            "map_y_m": sim.position[1],
+            "height_m": sim.position[2],
+            "accel_lateral_m_s2": sim.acceleration[0],
+            "accel_braking_m_s2": -sim.acceleration[1],
+            "accel_vertical_m_s2": sim.acceleration[2],
+            "raw_heading_rad": sim.heading,
+            "raw_pitch_rad": sim.pitch,
+            "raw_roll_rad": sim.roll,
+        }
+        for index, axis in enumerate(("x", "y", "z")):
+            values[f"raw_position_{axis}_m"] = sim.position[index]
+            values[f"raw_velocity_{axis}_m_s"] = sim.velocity[index]
+            values[f"raw_acceleration_{axis}_m_s2"] = sim.acceleration[index]
+            values[f"raw_angular_velocity_{axis}_rad_s"] = sim.angular_velocity[index]
+        for name, wheel in zip(("fl", "fr", "rl", "rr"), sim.wheels):
+            values.update({
+                f"suspension_{name}_mm": wheel.suspension_m * 1000,
+                f"rotation_{name}_rad_s": -wheel.rotation_rad_s,
+                f"load_{name}_n": wheel.load_n,
+                f"slip_angle_{name}_rad": math.atan(wheel.tan_slip_angle),
+                f"air_temperature_{name}_c": wheel.air_temperature_c,
+                f"slip_ratio_{name}_fraction": wheel.slip_ratio,
+                f"slip_fraction_{name}_fraction": wheel.slip_fraction_byte / 255,
+                f"touching_{name}_bool": bool(wheel.touching),
+                f"steer_{name}_rad": wheel.steer_rad,
+                f"force_x_{name}_n": wheel.force_x_n,
+                f"force_y_{name}_n": wheel.force_y_n,
+                f"lean_{name}_rad": wheel.lean_rad,
+            })
+        return _reader.TelemetryFrame(sim.time_ms / 1000, snapshot.generation, values)
+
 
 class Brake(_reader.Brake, DataAdapter):
     __slots__ = ()

@@ -47,8 +47,9 @@ class SimLFS(Connector):
 
     def reader(self) -> APIDataReader:
         source = self._udpapi
+        state = lfs_reader.State(source)
         return APIDataReader(
-            lfs_reader.State(source),
+            state,
             lfs_reader.Brake(source),
             lfs_reader.ElectricMotor(source),
             lfs_reader.Engine(source),
@@ -60,4 +61,5 @@ class SimLFS(Connector):
             lfs_reader.Tyre(source),
             lfs_reader.Vehicle(source),
             lfs_reader.Wheel(source),
+            capture=state.capture,
         )

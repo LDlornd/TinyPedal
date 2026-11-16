@@ -111,6 +111,10 @@ GLOBAL_DEFAULT = {
     "tyre_strategy_planner": {
         "last_file_path": "",
     },
+    "driving_recording": {
+        "last_output_path": paths.default_data_path("telemetry/"),
+        "sampling_interval": 20,
+    },
     "track_map_viewer": {
         "show_dark_background": True,
         "show_map_info": True,

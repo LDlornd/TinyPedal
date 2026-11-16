@@ -24,7 +24,7 @@ from __future__ import annotations
 
 import logging
 
-from . import adapter, cfg, realtime_state
+from . import adapter, cfg, realtime_state, recorder
 from .constant import API
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,7 @@ class APIControl:
 
     def stop(self):
         """Stop API"""
+        recorder.stop("api_stopped")
         logger.info("DISCONNECTING: %s API (%s)", self._api.NAME, self.read.state.version())
         self._api.stop()
         logger.info("DISCONNECTED: %s API", self._api.NAME)

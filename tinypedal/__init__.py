@@ -41,6 +41,7 @@ if TYPE_CHECKING:
     from .overlay_control import OverlayControl
     from .state import ApplicationSignal, OverlaySignal, RealtimeState
     from .update import UpdateChecker
+    from .driving_recording import DrivingRecorder
 
 
 # Create root logger
@@ -57,6 +58,7 @@ kctrl: HotkeyControl
 octrl: OverlayControl
 updater: UpdateChecker
 container: OverlayContainer
+recorder: DrivingRecorder
 
 # Global state & signal
 realtime_state: RealtimeState
@@ -277,6 +279,11 @@ def _init_globals(single_instance: bool, path_global: str):
     overlay_signal = OverlaySignal()
     app_signal = ApplicationSignal()
     realtime_state.singleton = single_instance
+
+    # APIControl 导入前先创建记录器，以便接口停止时先关闭记录文件。
+    global recorder
+    from .driving_recording import DrivingRecorder
+    recorder = DrivingRecorder()
 
     # API
     global api
