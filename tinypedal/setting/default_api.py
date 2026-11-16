@@ -23,6 +23,22 @@ Default API setting
 from ..constant import API
 
 API_DEFAULT = {
+    API.CONFIG_LFS: {
+        "character_encoding": "UTF-8",
+        "enable_active_state_override": False,
+        "active_state": True,
+        "enable_player_index_override": False,
+        "player_index": 0,
+        "outsim_port": 30000,
+        "outgauge_port": 30001,
+        "connection_timeout": 1.0,
+        "track_name": "",
+        "driver_name": "",
+        "track_length": 0.0,
+        "steering_range": 0.0,
+        "engine_rpm_max": 0.0,
+        "fuel_capacity": 0.0,
+    },
     API.CONFIG_ACC: {
         "access_mode": 0,
         "memory_map_prefix": "",

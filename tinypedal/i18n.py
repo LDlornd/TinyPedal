@@ -26,6 +26,11 @@ def option_label(name: str) -> str:
 
 
 TEXT = {
+    "Track Length": "赛道长度（米，人工填写）",
+    "Steering Range": "方向盘总转角（度，人工填写）",
+    "Engine RPM Max": "发动机最高转速（RPM，人工填写）",
+    "Fuel Capacity": "油箱容量（升，人工填写）",
+    "Outsim Port": "OutSim UDP 端口", "Outgauge Port": "OutGauge UDP 端口",
     "Enabled": "已启用", "Disabled": "已禁用", "Auto": "自动", "Off": "关闭",
     "overriding": "强制显示", "N/A": "不可用", "Show History": "显示历史",
     "Show Map": "显示地图", "Saved": "已保存", "Exported": "已导出",

@@ -90,6 +90,7 @@ CFG_HEATMAP = "heatmap"
 CFG_USER_PATH = "_path"
 CFG_USER_IMAGE = "_image_file"
 CFG_STRING = (
+    "^track_name$|^driver_name$|"
     # Exact match
     "^bind$|"
     "^connection_password$|"
@@ -109,6 +110,7 @@ CFG_STRING = (
 
 # Integer
 CFG_INTEGER = (
+    "^outsim_port$|^outgauge_port$|"
     # Exact match
     "^access_mode$|"
     "^display_orientation$|"

@@ -85,18 +85,21 @@ class API:
     NAME_LMULEGACY = "Le Mans Ultimate (legacy)"
     NAME_RF2 = "rFactor 2"
     NAME_ACC = "Assetto Corsa Competizione"
+    NAME_LFS = "Live for Speed"
 
     # Alias
     ALIAS_LMU = "LMU"
     ALIAS_LMULEGACY = "LMU*"
     ALIAS_RF2 = "RF2"
     ALIAS_ACC = "ACC"
+    ALIAS_LFS = "LFS"
 
     # Config name
     CONFIG_LMU = "api_lmu"
     CONFIG_LMULEGACY = "api_lmu"
     CONFIG_RF2 = "api_rf2"
     CONFIG_ACC = "api_acc"
+    CONFIG_LFS = "api_lfs"
 
     # Mapping
     MAP_ALIAS = MappingProxyType({
@@ -104,12 +107,14 @@ class API:
         NAME_LMULEGACY: ALIAS_LMULEGACY,
         NAME_RF2: ALIAS_RF2,
         NAME_ACC: ALIAS_ACC,
+        NAME_LFS: ALIAS_LFS,
     })
     MAP_CONFIG = MappingProxyType({
         NAME_LMU: CONFIG_LMU,
         NAME_LMULEGACY: CONFIG_LMULEGACY,
         NAME_RF2: CONFIG_RF2,
         NAME_ACC: CONFIG_ACC,
+        NAME_LFS: CONFIG_LFS,
     })
 
 
