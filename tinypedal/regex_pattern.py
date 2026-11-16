@@ -222,6 +222,7 @@ FONT_WEIGHT_MAP = MappingProxyType({
 
 # Choice dictionary
 CHOICE_COMMON = MappingProxyType({
+    "^language$": ("zh_CN", "en"),
     CFG_API_NAME: API.MAP_ALIAS.keys(),
     CFG_CHARACTER_ENCODING: ("UTF-8", "ISO-8859-1"),
     CFG_DELTABEST_SOURCE: ("Best", "Session", "Stint", "Last"),

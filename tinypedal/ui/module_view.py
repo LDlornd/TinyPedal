@@ -32,6 +32,7 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
+from ..i18n import tr
 from .. import app_signal, cfg
 from ..formatter import format_module_name
 from ..module_control import ModuleControl
@@ -60,10 +61,10 @@ class ModuleList(QWidget):
         self.create_list()
 
         # Button
-        button_enable = QPushButton("Enable All")
+        button_enable = QPushButton(tr("Enable All"))
         button_enable.clicked.connect(self.module_button_enable_all)
 
-        button_disable = QPushButton("Disable All")
+        button_disable = QPushButton(tr("Disable All"))
         button_disable.clicked.connect(self.module_button_disable_all)
 
         layout_button = QHBoxLayout()
@@ -101,8 +102,7 @@ class ModuleList(QWidget):
     def refresh_label(self):
         """Refresh label text"""
         self.label_loaded.setText(
-            f"Enabled: <b>{self.module_control.number_active}/"
-            f"{self.module_control.number_total}</b>"
+            tr("Enabled: <b>{0}/{1}</b>").format(self.module_control.number_active, self.module_control.number_total)
         )
 
     def module_button_enable_all(self):
@@ -123,9 +123,9 @@ class ModuleList(QWidget):
         """Batch toggle confirmation"""
         if not cfg.application["show_confirmation_for_batch_toggle"]:
             return True
-        msg_text = f"<b>{confirm_type}</b> all {self.module_control.type_id}s?"
+        msg_text = tr("<b>{0}</b> all {1}s?").format(tr(confirm_type), tr(self.module_control.type_id.title()))
         confirm_msg = QMessageBox.question(
-            self, "Confirm", msg_text,
+            self, tr("Confirm"), msg_text,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -154,7 +154,7 @@ class ModuleControlItem(QWidget):
         # Use "clicked" to avoid trigger with "setChecked"
         self.button_toggle.clicked.connect(self.toggle_state)
 
-        button_config = QPushButton("Config")
+        button_config = QPushButton(tr("Config"))
         button_config.setObjectName("buttonConfig")
         button_config.pressed.connect(self.open_config_dialog)
 
@@ -182,7 +182,7 @@ class ModuleControlItem(QWidget):
 
     def update_button_text(self):
         """Update button text"""
-        self.button_toggle.setText("ON" if self.is_enabled() else "OFF")
+        self.button_toggle.setText(tr("ON") if self.is_enabled() else tr("OFF"))
         self._parent.refresh_label()
 
     def open_config_dialog(self):

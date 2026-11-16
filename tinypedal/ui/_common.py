@@ -51,6 +51,7 @@ from PySide2.QtWidgets import (
 )
 
 from ..constant import APP
+from ..i18n import tr
 from ..validator import is_string_number
 from ._style import UIScaler
 
@@ -109,10 +110,9 @@ class DialogSingletonError:
         if not self._show_error:
             return
         msg_text = (
-            f"Already opened <b>{self._dialog_type.title()} dialog</b>."
-            "<br><br>Please close previous dialog first."
+            tr("Already opened <b>{0} dialog</b>.<br><br>Please close previous dialog first.").format(self._dialog_type.title())
         )
-        QMessageBox.warning(parent, "Error", msg_text)
+        QMessageBox.warning(parent, tr("Error"), msg_text)
 
     def open(self, parent=None):
         self._message(parent)
@@ -162,7 +162,7 @@ class BaseDialog(QDialog):
     def confirm_operation(self, title: str = "Confirm", message: str = "") -> bool:
         """Confirm operation"""
         confirm = QMessageBox.question(
-            self, title, message,
+            self, tr(title), message,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -185,7 +185,7 @@ class BaseEditor(BaseDialog):
             return True
 
         confirm = QMessageBox.question(
-            self, "Confirm", "<b>Save changes before continue?</b>",
+            self, tr("Confirm"), tr("<b>Save changes before continue?</b>"),
             buttons=QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
 
         if confirm == QMessageBox.Save:
@@ -263,14 +263,14 @@ class BatchOffset(BaseDialog):
 
     def __init__(self, parent, offset_func: Callable):
         super().__init__(parent)
-        self.setWindowTitle("Batch Offset")
+        self.setWindowTitle(tr("Batch Offset"))
         self.decimals = 0
         self.value_range = 0, 1
         self.offset_func = offset_func
         self.edit_offset = QDoubleSpinBox()
         self.last_offset = QLabel("0")
-        self.last_label = QLabel("Last Offset:")
-        self.checkbox_scale = QCheckBox("Scale Mode")
+        self.last_label = QLabel(tr("Last Offset:"))
+        self.checkbox_scale = QCheckBox(tr("Scale Mode"))
 
     def config(self, decimals: int, step: float, min_range: int, max_range: int):
         """Config offset"""
@@ -320,11 +320,11 @@ class BatchOffset(BaseDialog):
         if checked:
             self.edit_offset.setRange(0, 100)
             self.edit_offset.setDecimals(6)
-            self.last_label.setText("Last Scale:")
+            self.last_label.setText(tr("Last Scale:"))
         else:
             self.edit_offset.setRange(*self.value_range)
             self.edit_offset.setDecimals(self.decimals)
-            self.last_label.setText("Last Offset:")
+            self.last_label.setText(tr("Last Offset:"))
 
     def applying(self):
         """Apply offset"""
@@ -348,7 +348,7 @@ class TableBatchReplace(BaseDialog):
         super().__init__(parent)
         self.table_selector = table_selector
         self.table_data = table_data
-        self.setWindowTitle("Batch Replace")
+        self.setWindowTitle(tr("Batch Replace"))
 
         # Label & combobox
         self.search_selector = QComboBox()
@@ -362,16 +362,16 @@ class TableBatchReplace(BaseDialog):
 
         self.replace_entry = QLineEdit()
 
-        self.checkbox_casematch = QCheckBox("Match Case")
+        self.checkbox_casematch = QCheckBox(tr("Match Case"))
         self.checkbox_casematch.setChecked(False)
-        self.checkbox_exactmatch = QCheckBox("Match Whole Word")
+        self.checkbox_exactmatch = QCheckBox(tr("Match Whole Word"))
         self.checkbox_exactmatch.setChecked(False)
 
         layout_option = QGridLayout()
         layout_option.setAlignment(Qt.AlignTop)
-        layout_option.addWidget(QLabel("Column:"), 0, 0)
-        layout_option.addWidget(QLabel("Find:"), 1, 0)
-        layout_option.addWidget(QLabel("Replace:"), 2, 0)
+        layout_option.addWidget(QLabel(tr("Column:")), 0, 0)
+        layout_option.addWidget(QLabel(tr("Find:")), 1, 0)
+        layout_option.addWidget(QLabel(tr("Replace:")), 2, 0)
         layout_option.addWidget(self.column_selector, 0, 1)
         layout_option.addWidget(self.search_selector, 1, 1)
         layout_option.addWidget(self.replace_entry, 2, 1)
@@ -379,7 +379,7 @@ class TableBatchReplace(BaseDialog):
         layout_option.addWidget(self.checkbox_casematch, 4, 1)
 
         # Button
-        button_replace = QPushButton("Replace")
+        button_replace = QPushButton(tr("Replace"))
         button_replace.clicked.connect(self.replacing)
 
         button_close = QDialogButtonBox(QDialogButtonBox.Close)
@@ -412,7 +412,7 @@ class TableBatchReplace(BaseDialog):
     def replacing(self):
         """Replace"""
         if not self.search_selector.currentText():
-            QMessageBox.warning(self, "Error", "Invalid name.")
+            QMessageBox.warning(self, tr("Error"), tr("Invalid name."))
             return
 
         column_index = self.table_selector[self.column_selector.currentText()]

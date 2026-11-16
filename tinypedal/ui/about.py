@@ -35,6 +35,7 @@ from PySide2.QtWidgets import (
 )
 
 from ..constant import APP, FILE
+from ..i18n import tr
 from ._common import BaseDialog, UIScaler, singleton_dialog
 
 logger = logging.getLogger(__name__)
@@ -49,7 +50,7 @@ class About(BaseDialog):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle(f"About {APP.TINYPEDAL}")
+        self.setWindowTitle(tr("About {0}").format(APP.TINYPEDAL))
 
         # Tab
         main_tab = self.add_tabs()
@@ -76,10 +77,10 @@ class About(BaseDialog):
         lics_tab = self.new_text_tab(self.load_text_files(FILE.DOC_LICENSE))
         tpan_tab = self.new_text_tab(self.load_text_files(FILE.DOC_THIRDPARTYNOTICES))
         main_tab = QTabWidget(self)
-        main_tab.addTab(info_tab, "About")
-        main_tab.addTab(ctrb_tab, "Contributors")
-        main_tab.addTab(lics_tab, "License")
-        main_tab.addTab(tpan_tab, "Third-Party Notices")
+        main_tab.addTab(info_tab, tr("About"))
+        main_tab.addTab(ctrb_tab, tr("Contributors"))
+        main_tab.addTab(lics_tab, tr("License"))
+        main_tab.addTab(tpan_tab, tr("Third-Party Notices"))
         return main_tab
 
     @staticmethod
@@ -117,12 +118,11 @@ class About(BaseDialog):
         label_name.setObjectName("labelAppName")
         label_name.setAlignment(Qt.AlignCenter)
 
-        label_version = QLabel(f"Version {APP.VERSION}")
+        label_version = QLabel(tr("Version {0}").format(APP.VERSION))
         label_version.setAlignment(Qt.AlignCenter)
 
         label_desc = QLabel(
-            f"<p>{APP.COPYRIGHT}</p><p>{APP.DESCRIPTION}</p><p>{APP.LICENSE}</p>"
-            f"<p><a href={APP.URL_WEBSITE}>{APP.URL_WEBSITE}</a></p>"
+            tr("<p>{0}</p><p>{1}</p><p>{2}</p><p><a href={3}>{4}</a></p>").format(APP.COPYRIGHT, APP.DESCRIPTION, APP.LICENSE, APP.URL_WEBSITE, APP.URL_WEBSITE)
         )
         label_desc.setAlignment(Qt.AlignCenter)
         label_desc.setOpenExternalLinks(True)

@@ -35,6 +35,7 @@ from PySide2.QtWidgets import (
 
 from .. import api, cfg
 from ..constant import CONFIG, HEATMAP
+from ..i18n import option_label, tr
 from ..userfile.heatmap import set_predefined_brake_name
 from ..userfile.json_setting import copy_setting
 from ._common import BaseEditor, CompactButton, FloatTableItem, UIScaler
@@ -49,7 +50,7 @@ class BrakeEditor(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Brake Editor")
+        self.set_utility_title(tr("Brake Editor"))
         self.setMinimumSize(UIScaler.size(45), UIScaler.size(38))
 
         self.brakes_temp = copy_setting(cfg.user.brakes)
@@ -57,7 +58,7 @@ class BrakeEditor(BaseEditor):
         # Set table
         self.table_brakes = QTableWidget(self)
         self.table_brakes.setColumnCount(len(HEADER_BRAKES))
-        self.table_brakes.setHorizontalHeaderLabels(HEADER_BRAKES)
+        self.table_brakes.setHorizontalHeaderLabels([option_label(header) for header in HEADER_BRAKES])
         self.table_brakes.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.table_brakes.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # Thickness column
@@ -83,28 +84,28 @@ class BrakeEditor(BaseEditor):
 
     def set_layout_button(self):
         """Set button layout"""
-        button_add = CompactButton("Add")
+        button_add = CompactButton(tr("Add"))
         button_add.clicked.connect(self.add_brake)
 
-        button_sort = CompactButton("Sort")
+        button_sort = CompactButton(tr("Sort"))
         button_sort.clicked.connect(self.sort_brake)
 
-        button_delete = CompactButton("Delete")
+        button_delete = CompactButton(tr("Delete"))
         button_delete.clicked.connect(self.delete_brake)
 
         #button_replace = CompactButton("Replace")
         #button_replace.clicked.connect(self.open_replace_dialog)
 
-        button_reset = CompactButton("Reset")
+        button_reset = CompactButton(tr("Reset"))
         button_reset.clicked.connect(self.reset_setting)
 
-        button_apply = CompactButton("Apply")
+        button_apply = CompactButton(tr("Apply"))
         button_apply.clicked.connect(self.applying)
 
-        button_save = CompactButton("Save")
+        button_save = CompactButton(tr("Save"))
         button_save.clicked.connect(self.saving)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         # Set layout
@@ -191,10 +192,10 @@ class BrakeEditor(BaseEditor):
         """Delete brake entry"""
         selected_rows = {data.row() for data in self.table_brakes.selectedIndexes()}
         if not selected_rows:
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
 
-        if not self.confirm_operation(message="<b>Delete selected rows?</b>"):
+        if not self.confirm_operation(message=tr("<b>Delete selected rows?</b>")):
             return
 
         for row_index in sorted(selected_rows, reverse=True):
@@ -204,8 +205,7 @@ class BrakeEditor(BaseEditor):
     def reset_setting(self):
         """Reset setting"""
         msg_text = (
-            "Reset <b>brakes preset</b> to default?<br><br>"
-            "Changes are only saved after clicking Apply or Save Button."
+            tr("Reset <b>brakes preset</b> to default?<br><br>Changes are only saved after clicking Apply or Save Button.")
         )
         if self.confirm_operation(message=msg_text):
             self.brakes_temp = copy_setting(cfg.default.brakes)

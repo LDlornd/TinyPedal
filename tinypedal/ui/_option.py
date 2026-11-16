@@ -40,6 +40,7 @@ from PySide2.QtWidgets import (
 
 from .. import paths
 from ..constant import FILE
+from ..i18n import tr
 from ..validator import image_exists, is_clock_format, is_hex_color, is_string_number
 
 
@@ -76,7 +77,7 @@ class BaseLineEdit(QLineEdit):
         """Context menu for reset option to default value"""
         if self._default is not None:
             menu = QMenu()  # no parent for temp menu
-            option_reset = menu.addAction("Reset to Default")
+            option_reset = menu.addAction(tr("Reset to Default"))
             action = menu.exec_(self.mapToGlobal(position))
             if action == option_reset:
                 self.reset_to_default()
@@ -109,7 +110,7 @@ class BaseCheckBox(QCheckBox):
         """Context menu for reset option to default value"""
         if self._default is not None:
             menu = QMenu()  # no parent for temp menu
-            option_reset = menu.addAction("Reset to Default")
+            option_reset = menu.addAction(tr("Reset to Default"))
             action = menu.exec_(self.mapToGlobal(position))
             if action == option_reset:
                 self.reset_to_default()
@@ -142,7 +143,7 @@ class BaseComboBox(QComboBox):
         """Context menu for reset option to default value"""
         if self._default is not None:
             menu = QMenu()  # no parent for temp menu
-            option_reset = menu.addAction("Reset to Default")
+            option_reset = menu.addAction(tr("Reset to Default"))
             action = menu.exec_(self.mapToGlobal(position))
             if action == option_reset:
                 self.reset_to_default()

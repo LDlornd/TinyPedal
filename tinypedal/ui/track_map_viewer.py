@@ -43,6 +43,7 @@ from PySide2.QtWidgets import (
 from .. import calculation as calc
 from .. import cfg, state
 from ..constant import CONFIG, FILE
+from ..i18n import option_label, tr
 from ..userfile.track_map import load_track_map_file
 from ._common import BaseDialog, CompactButton, UIScaler
 from .config import UserConfig
@@ -53,7 +54,7 @@ class TrackMapViewer(BaseDialog):
 
     def __init__(self, parent, filepath: str = "", filename: str = ""):
         super().__init__(parent)
-        self.set_utility_title("Track Map Viewer")
+        self.set_utility_title(tr("Track Map Viewer"))
 
         # Set panel
         self.trackmap_panel = self.set_layout_trackmap()
@@ -208,7 +209,7 @@ class MapView(QWidget):
         # Outer controls
         self.edit_filename = QLineEdit()
         self.edit_filename.setReadOnly(True)
-        self.edit_filename.setPlaceholderText("Track Map Name")
+        self.edit_filename.setPlaceholderText(tr("Track Map Name"))
 
         self.spinbox_map_scale = QDoubleSpinBox()
         self.spinbox_map_scale.setRange(0.01, 10)
@@ -242,10 +243,10 @@ class MapView(QWidget):
 
     def set_button_layout(self):
         """Set button layout"""
-        button_load = CompactButton("Load Map")
+        button_load = CompactButton(tr("Load Map"))
         button_load.clicked.connect(self.open_trackmap)
 
-        button_config = CompactButton("Config")
+        button_config = CompactButton(tr("Config"))
         button_config.clicked.connect(self.open_config_dialog)
 
         layout_button = QHBoxLayout()
@@ -257,12 +258,12 @@ class MapView(QWidget):
     def set_control_layout(self):
         """Set control layout"""
         layout_control = QHBoxLayout()
-        layout_control.addWidget(QLabel("Zoom:"))
+        layout_control.addWidget(QLabel(tr("Zoom:")))
         layout_control.addWidget(self.spinbox_map_scale)
         layout_control.addStretch(1)
-        layout_control.addWidget(QLabel("Position:"))
+        layout_control.addWidget(QLabel(tr("Position:")))
         layout_control.addWidget(self.spinbox_pos_dist)
-        layout_control.addWidget(QLabel("Nodes:"))
+        layout_control.addWidget(QLabel(tr("Nodes:")))
         layout_control.addWidget(self.spinbox_nodes)
         return layout_control
 
@@ -329,8 +330,8 @@ class MapView(QWidget):
     def set_context_menu(self):
         """Set context menu"""
         menu = QMenu()  # temp menu, no parent
-        menu.addAction("Reset Map View")
-        menu.addAction("Reset Map Zoom")
+        menu.addAction(tr("Reset Map View"))
+        menu.addAction(tr("Reset Map Zoom"))
         menu_items = (
             None,
             "show_dark_background",
@@ -351,7 +352,8 @@ class MapView(QWidget):
             if key is None:
                 menu.addSeparator()
                 continue
-            option = menu.addAction(key.replace("show_", "").replace("_", " ").title())
+            option = menu.addAction(option_label(key.replace("show_", "").replace("_", " ").title()))
+            option.setData(key)
             option.setCheckable(True)
             option.setChecked(self.ecfg[key])
         return menu
@@ -362,13 +364,13 @@ class MapView(QWidget):
         action = menu.exec_(self.mapToGlobal(position))
         if action:
             action_text = action.text()
-            if action_text == "Reset Map View":
+            if action_text == tr("Reset Map View"):
                 self.reset_map_view()
                 self.update()
-            elif action_text == "Reset Map Zoom":
+            elif action_text == tr("Reset Map Zoom"):
                 self.spinbox_map_scale.setValue(1)
             else:
-                name = "show_" + action_text.replace(" ", "_").lower()
+                name = action.data()
                 self.ecfg[name] = not self.ecfg[name]
                 cfg.save(config_type=CONFIG.TYPE_CONFIG)
                 self.update()
@@ -399,8 +401,8 @@ class MapView(QWidget):
     def load_trackmap(self, filepath: str, filename: str):
         """Load trackmap"""
         if not os.path.exists(f"{filepath}{filename}{FILE.EXT_SVG}"):
-            msg_text = f"Cannot find track map for<br><b>{filename}</b><br>"
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("Cannot find track map for<br><b>{0}</b><br>").format(filename)
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
 
         self.raw_coords, self.raw_dists, sector_index = load_track_map_file(
@@ -418,11 +420,9 @@ class MapView(QWidget):
             self.map_nodes = 0
             self.map_filename = ""
             msg_text = (
-                "Unable to load track map file from<br>"
-                f"<b>{filepath}{filename}{FILE.EXT_SVG}</b><br><br>"
-                "Only support SVG file that generated with TinyPedal."
+                tr("Unable to load track map file from<br><b>{0}{1}{2}</b><br><br>Only support SVG file that generated with TinyPedal.").format(filepath, filename, FILE.EXT_SVG)
             )
-            QMessageBox.warning(self, "Error", msg_text)
+            QMessageBox.warning(self, tr("Error"), msg_text)
 
         self.reset_control()
         self.update()

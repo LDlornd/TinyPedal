@@ -52,6 +52,7 @@ from PySide2.QtWidgets import (
 from .. import api, cfg, minfo, units
 from .. import calculation as calc
 from ..constant import CONFIG, DATA, FILE
+from ..i18n import option_label, tr
 from ..formatter import laptime_string_to_seconds
 from ..module_info import ConsumptionData
 from ..userfile.consumption_history import load_consumption_history_file
@@ -107,7 +108,7 @@ class FuelCalculator(BaseDialog):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Fuel Calculator")
+        self.set_utility_title(tr("Fuel Calculator"))
         layout_main = QVBoxLayout()
         self.setLayout(layout_main)
 
@@ -117,7 +118,7 @@ class FuelCalculator(BaseDialog):
         # Panel history
         self.panel_history = HistoryPanel(self)
 
-        self.button_adddata = QPushButton("Add Selected Data")
+        self.button_adddata = QPushButton(tr("Add Selected Data"))
         self.button_adddata.clicked.connect(self.add_selected_data)
         self.button_adddata.setFocusPolicy(Qt.NoFocus)
 
@@ -128,15 +129,15 @@ class FuelCalculator(BaseDialog):
         # Panel calculator
         self.panel_calculator = CalculatorPanel(self)
 
-        button_loadlive = QPushButton("Load Live")
+        button_loadlive = QPushButton(tr("Load Live"))
         button_loadlive.clicked.connect(self.load_live_data)
         button_loadlive.setFocusPolicy(Qt.NoFocus)
 
-        button_loadfile = QPushButton("Load File")
+        button_loadfile = QPushButton(tr("Load File"))
         button_loadfile.clicked.connect(self.load_file_data)
         button_loadfile.setFocusPolicy(Qt.NoFocus)
 
-        self.button_toggle = QPushButton("Hide History")
+        self.button_toggle = QPushButton(tr("Hide History"))
         self.button_toggle.setCheckable(True)
         self.button_toggle.setChecked(True)
         self.button_toggle.toggled.connect(self.toggle_history_panel)
@@ -195,7 +196,7 @@ class FuelCalculator(BaseDialog):
         """Add selected data to calculator"""
         selected_data = self.panel_history.table_history.selectedItems()
         if not selected_data:
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
         self.panel_calculator.add_table_data(selected_data)
 
@@ -203,7 +204,7 @@ class FuelCalculator(BaseDialog):
         """Toggle history data panel"""
         self.panel_history.setHidden(not checked)
         self.button_adddata.setHidden(not checked)
-        self.button_toggle.setText("Hide History" if checked else "Show History")
+        self.button_toggle.setText(tr("Hide History") if checked else tr("Show History"))
 
         margin = self.layout().contentsMargins()
         width = self.panel_calculator.width() + margin.left() + margin.right()
@@ -227,7 +228,8 @@ class FuelCalculator(BaseDialog):
         for option_name in config:
             if option_name.startswith("show_column"):
                 action_name = option_name.replace("show_column_", "").replace("_", " ").title()
-                action = menu.addAction(action_name)
+                action = menu.addAction(option_label(action_name))
+                action.setData(option_name)
                 action.setCheckable(True)
                 action.setChecked(config[option_name])
 
@@ -235,7 +237,7 @@ class FuelCalculator(BaseDialog):
         if not selected_action:
             return
 
-        selected_name = "show_column_" + selected_action.text().replace(" ", "_").lower()
+        selected_name = selected_action.data()
         if selected_name in config:
             config[selected_name] = not config[selected_name]
             self.panel_history.toggle_column()
@@ -446,7 +448,7 @@ class HistoryPanel(QWidget):
 
         self.table_history = QTableWidget(self)
         self.table_history.setColumnCount(len(self.columns))
-        self.table_history.setHorizontalHeaderLabels([col["name"] for col in self.columns])
+        self.table_history.setHorizontalHeaderLabels([option_label(header) for header in [col["name"] for col in self.columns]])
         self.table_history.verticalHeader().setVisible(False)
         self.table_history.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         for idx, col in enumerate(self.columns):
@@ -575,8 +577,8 @@ class CalculatorPanel(QWidget):
 
         # Result tabs
         result_tabs = QTabWidget(self)
-        result_tabs.addTab(panel_result, "Fuel Usage")  # 0
-        result_tabs.addTab(panel_wear, "Wear Rate")  # 1
+        result_tabs.addTab(panel_result, tr("Fuel Usage"))  # 0
+        result_tabs.addTab(panel_wear, tr("Wear Rate"))  # 1
 
         # Calculator panel
         layout_calculator = QVBoxLayout()
@@ -871,16 +873,16 @@ class InputLapTime(QFrame):
         self.mseconds.setSingleStep(100)
         self.mseconds.valueChanged.connect(parent.update_input)
 
-        layout.addWidget(QLabel("Lap Time:"), 0, 0, 1, 6)
+        layout.addWidget(QLabel(tr("Lap Time:")), 0, 0, 1, 6)
 
         layout.addWidget(self.minutes, 1, 0)
-        layout.addWidget(QLabel("m"), 1, 1)
+        layout.addWidget(QLabel(tr("m")), 1, 1)
 
         layout.addWidget(self.seconds, 1, 2)
-        layout.addWidget(QLabel("s"), 1, 3)
+        layout.addWidget(QLabel(tr("s")), 1, 3)
 
         layout.addWidget(self.mseconds, 1, 4)
-        layout.addWidget(QLabel("ms"), 1, 5)
+        layout.addWidget(QLabel(tr("ms")), 1, 5)
 
     def to_seconds(self):
         """Output lap time value to seconds"""

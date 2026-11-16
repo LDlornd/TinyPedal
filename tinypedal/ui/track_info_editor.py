@@ -36,6 +36,7 @@ from PySide2.QtWidgets import (
 
 from .. import api, cfg
 from ..constant import CONFIG
+from ..i18n import option_label, tr
 from ..setting.default_tracks import TRACKINFO_DEFAULT
 from ..userfile.json_setting import copy_setting
 from ._common import BaseEditor, ClockTableItem, CompactButton, FloatTableItem, UIScaler
@@ -59,7 +60,7 @@ class TrackInfoEditor(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Track Info Editor")
+        self.set_utility_title(tr("Track Info Editor"))
         self.setMinimumSize(UIScaler.size(68), UIScaler.size(35))
 
         self.tracks_temp = copy_setting(cfg.user.tracks)
@@ -67,7 +68,7 @@ class TrackInfoEditor(BaseEditor):
         # Set table
         self.table_tracks = QTableWidget(self)
         self.table_tracks.setColumnCount(len(HEADER_TRACKS))
-        self.table_tracks.setHorizontalHeaderLabels(HEADER_TRACKS)
+        self.table_tracks.setHorizontalHeaderLabels([option_label(header) for header in HEADER_TRACKS])
         self.table_tracks.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.table_tracks.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         for column_index in range(1, len(HEADER_TRACKS)):
@@ -93,25 +94,25 @@ class TrackInfoEditor(BaseEditor):
 
     def set_layout_button(self):
         """Set button layout"""
-        button_add = CompactButton("Add")
+        button_add = CompactButton(tr("Add"))
         button_add.clicked.connect(self.add_track)
 
-        button_sort = CompactButton("Sort")
+        button_sort = CompactButton(tr("Sort"))
         button_sort.clicked.connect(self.sort_track)
 
-        button_delete = CompactButton("Delete")
+        button_delete = CompactButton(tr("Delete"))
         button_delete.clicked.connect(self.delete_track)
 
-        button_reset = CompactButton("Reset")
+        button_reset = CompactButton(tr("Reset"))
         button_reset.clicked.connect(self.reset_setting)
 
-        button_apply = CompactButton("Apply")
+        button_apply = CompactButton(tr("Apply"))
         button_apply.clicked.connect(self.applying)
 
-        button_save = CompactButton("Save")
+        button_save = CompactButton(tr("Save"))
         button_save.clicked.connect(self.saving)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         # Set layout
@@ -169,10 +170,10 @@ class TrackInfoEditor(BaseEditor):
         """Delete track entry"""
         selected_rows = {data.row() for data in self.table_tracks.selectedIndexes()}
         if not selected_rows:
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
 
-        if not self.confirm_operation(message="<b>Delete selected rows?</b>"):
+        if not self.confirm_operation(message=tr("<b>Delete selected rows?</b>")):
             return
 
         for row_index in sorted(selected_rows, reverse=True):
@@ -182,8 +183,7 @@ class TrackInfoEditor(BaseEditor):
     def reset_setting(self):
         """Reset setting"""
         msg_text = (
-            "Reset <b>tracks preset</b> to default?<br><br>"
-            "Changes are only saved after clicking Apply or Save Button."
+            tr("Reset <b>tracks preset</b> to default?<br><br>Changes are only saved after clicking Apply or Save Button.")
         )
         if self.confirm_operation(message=msg_text):
             self.tracks_temp = copy_setting(cfg.default.tracks)
@@ -213,7 +213,7 @@ class TrackInfoEditor(BaseEditor):
 
         menu = QMenu()
         if self.table_tracks.currentColumn() == 4:
-            menu.addAction("Set from Telemetry")
+            menu.addAction(tr("Set from Telemetry"))
         else:
             return
 
@@ -226,21 +226,21 @@ class TrackInfoEditor(BaseEditor):
             return
 
         action = selected_action.text()
-        if action == "Set from Telemetry":
+        if action == tr("Set from Telemetry"):
             self.set_position_from_tele()
 
     def set_position_from_tele(self):
         """Set position from telemetry to selected cell"""
         if len(self.table_tracks.selectedIndexes()) != 1:  # limit to one selected cell
             msg_text = (
-                "Select <b>one value</b> from <b>Speed trap</b> column to set position."
+                tr("Select <b>one value</b> from <b>Speed trap</b> column to set position.")
             )
-            QMessageBox.warning(self, "Error", msg_text)
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
 
         if api.read.vehicle.in_pits():
-            msg_text = "Cannot set speed trap position while in pit lane."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("Cannot set speed trap position while in pit lane.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
 
         row_index = self.table_tracks.currentRow()
@@ -248,15 +248,14 @@ class TrackInfoEditor(BaseEditor):
         current_name = api.read.session.track_name()
         if track_name != current_name:
             msg_text = (
-                f"Unable to set speed trap position for selected track:<br><b>{track_name}</b><br><br>"
-                f"Only support to set speed trap position for current track:<br><b>{current_name}</b>"
+                tr("Unable to set speed trap position for selected track:<br><b>{0}</b><br><br>Only support to set speed trap position for current track:<br><b>{1}</b>").format(track_name, current_name)
             )
-            QMessageBox.warning(self, "Error", msg_text)
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
 
         position = round(api.read.lap.distance(), 4)
         if not self.confirm_operation(
-            message=f"Set speed trap at position <b>{position}</b><br>for <b>{track_name}</b>?"):
+            message=tr("Set speed trap at position <b>{0}</b><br>for <b>{1}</b>?").format(position, track_name)):
             return
 
         self.table_tracks.item(row_index, 4).setValue(position)

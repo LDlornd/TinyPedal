@@ -34,6 +34,7 @@ from PySide2.QtWidgets import (
     QWidget,
 )
 
+from ..i18n import tr
 from .. import api, app_signal, cfg, mctrl, realtime_state
 from ._common import UIScaler
 
@@ -62,10 +63,10 @@ class SpectateList(QWidget):
         self.listbox_spectate.itemDoubleClicked.connect(self.spectate_selected)
 
         # Button
-        self.button_spectate = QPushButton("Spectate")
+        self.button_spectate = QPushButton(tr("Spectate"))
         self.button_spectate.clicked.connect(self.spectate_selected)
 
-        self.button_refresh = QPushButton("Refresh")
+        self.button_refresh = QPushButton(tr("Refresh"))
         self.button_refresh.clicked.connect(self.refresh)
 
         self.button_toggle = QPushButton("")
@@ -126,7 +127,7 @@ class SpectateList(QWidget):
             return
 
         self.last_driver_name = driver_name
-        self.label_spectating.setText(f"Spectating: <b>{driver_name}</b>")
+        self.label_spectating.setText(tr("Spectating: <b>{0}</b>").format(driver_name))
 
         if realtime_state.active:
             for module_name in (
@@ -141,7 +142,7 @@ class SpectateList(QWidget):
     def set_enable_state(self, enabled: bool):
         """Set enable state"""
         self.button_toggle.setChecked(enabled)
-        self.button_toggle.setText("Enabled" if enabled else "Disabled")
+        self.button_toggle.setText(tr("Enabled") if enabled else tr("Disabled"))
         self.listbox_spectate.setDisabled(not enabled)
         self.button_spectate.setDisabled(not enabled)
         self.button_refresh.setDisabled(not enabled)
@@ -151,7 +152,7 @@ class SpectateList(QWidget):
             logger.info("ENABLED: spectate mode")
         else:
             self._update_timer.stop()
-            self.label_spectating.setText("Spectating: <b>Disabled</b>")
+            self.label_spectating.setText(tr("Spectating: <b>Disabled</b>"))
             logger.info("DISABLED: spectate mode")
 
     def toggle_spectate(self, checked: bool):

@@ -42,6 +42,7 @@ from PySide2.QtWidgets import (
 from .. import api, cfg
 from ..async_request import get_response, resolve_hostname, set_header_get
 from ..constant import API, CONFIG, FILE
+from ..i18n import option_label, tr
 from ..userfile.brands import extract_brand_name
 from ..userfile.json_setting import copy_setting
 from ._common import BaseEditor, CompactButton, TableBatchReplace, UIScaler
@@ -56,7 +57,7 @@ class VehicleBrandEditor(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Vehicle Brand Editor")
+        self.set_utility_title(tr("Vehicle Brand Editor"))
         self.setMinimumSize(UIScaler.size(45), UIScaler.size(38))
 
         self.brands_temp = copy_setting(cfg.user.brands)
@@ -64,7 +65,7 @@ class VehicleBrandEditor(BaseEditor):
         # Set table
         self.table_brands = QTableWidget(self)
         self.table_brands.setColumnCount(len(HEADER_BRANDS))
-        self.table_brands.setHorizontalHeaderLabels(HEADER_BRANDS)
+        self.table_brands.setHorizontalHeaderLabels([option_label(header) for header in HEADER_BRANDS])
         self.table_brands.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table_brands.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
 
@@ -87,38 +88,38 @@ class VehicleBrandEditor(BaseEditor):
         # Menu
         import_menu = QMenu(self)
 
-        import_rf2 = import_menu.addAction("RF2 Rest API")
+        import_rf2 = import_menu.addAction(tr("RF2 Rest API"))
         import_rf2.triggered.connect(self.import_from_rf2)
 
-        import_json = import_menu.addAction("JSON file")
+        import_json = import_menu.addAction(tr("JSON file"))
         import_json.triggered.connect(self.import_from_file)
 
         # Button
-        button_import = CompactButton("Import from", has_menu=True)
+        button_import = CompactButton(tr("Import from"), has_menu=True)
         button_import.setMenu(import_menu)
 
-        button_add = CompactButton("Add")
+        button_add = CompactButton(tr("Add"))
         button_add.clicked.connect(self.add_brand)
 
-        button_sort = CompactButton("Sort")
+        button_sort = CompactButton(tr("Sort"))
         button_sort.clicked.connect(self.sort_brand)
 
-        button_delete = CompactButton("Delete")
+        button_delete = CompactButton(tr("Delete"))
         button_delete.clicked.connect(self.delete_brand)
 
-        button_replace = CompactButton("Replace")
+        button_replace = CompactButton(tr("Replace"))
         button_replace.clicked.connect(self.open_replace_dialog)
 
-        button_reset = CompactButton("Reset")
+        button_reset = CompactButton(tr("Reset"))
         button_reset.clicked.connect(self.reset_setting)
 
-        button_apply = CompactButton("Apply")
+        button_apply = CompactButton(tr("Apply"))
         button_apply.clicked.connect(self.applying)
 
-        button_save = CompactButton("Save")
+        button_save = CompactButton(tr("Save"))
         button_save.clicked.connect(self.saving)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         # Set layout
@@ -163,10 +164,9 @@ class VehicleBrandEditor(BaseEditor):
                 OSError, TimeoutError, BaseException):
             logger.error("Failed importing vehicle data from %s Rest API", sim_name)
             msg_text = (
-                f"Unable to import vehicle data from {sim_name} Rest API.<br><br>"
-                "Make sure game is running and try again."
+                tr("Unable to import vehicle data from {0} Rest API.<br><br>Make sure game is running and try again.").format(sim_name)
             )
-            QMessageBox.warning(self, "Error", msg_text)
+            QMessageBox.warning(self, tr("Error"), msg_text)
 
     def import_from_file(self):
         """Import brand from file"""
@@ -185,8 +185,8 @@ class VehicleBrandEditor(BaseEditor):
         except (AttributeError, IndexError, KeyError, TypeError,
                 FileNotFoundError, ValueError, OSError):
             logger.error("Failed importing %s", filename_full)
-            msg_text = "Cannot import selected file.<br><br>Invalid vehicle data file."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("Cannot import selected file.<br><br>Invalid vehicle data file.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
 
     def parse_brand_data(self, vehicles: dict):
         """Parse brand data"""
@@ -203,7 +203,7 @@ class VehicleBrandEditor(BaseEditor):
         brands_db.update(self.brands_temp)
         self.brands_temp = brands_db
         self.refresh_table()
-        QMessageBox.information(self, "Data Imported", "Vehicle brand data imported.")
+        QMessageBox.information(self, tr("Data Imported"), tr("Vehicle brand data imported."))
 
     def open_replace_dialog(self):
         """Open replace dialog"""
@@ -244,10 +244,10 @@ class VehicleBrandEditor(BaseEditor):
         """Delete brand entry"""
         selected_rows = {data.row() for data in self.table_brands.selectedIndexes()}
         if not selected_rows:
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
 
-        if not self.confirm_operation(message="<b>Delete selected rows?</b>"):
+        if not self.confirm_operation(message=tr("<b>Delete selected rows?</b>")):
             return
 
         for row_index in sorted(selected_rows, reverse=True):
@@ -257,8 +257,7 @@ class VehicleBrandEditor(BaseEditor):
     def reset_setting(self):
         """Reset setting"""
         msg_text = (
-            "Reset <b>brands preset</b> to default?<br><br>"
-            "Changes are only saved after clicking Apply or Save Button."
+            tr("Reset <b>brands preset</b> to default?<br><br>Changes are only saved after clicking Apply or Save Button.")
         )
         if self.confirm_operation(message=msg_text):
             self.brands_temp = copy_setting(cfg.default.brands)

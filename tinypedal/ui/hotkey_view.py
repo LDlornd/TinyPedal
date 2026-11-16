@@ -40,6 +40,7 @@ from PySide2.QtWidgets import (
 
 from .. import app_signal, cfg, kctrl
 from ..constant import CONFIG, FILE, PLATFORM
+from ..i18n import tr
 from ..formatter import format_option_name
 from ..hotkey.common import (
     format_hotkey_name,
@@ -70,7 +71,7 @@ class HotkeyList(QWidget):
         self.create_list()
 
         # Button
-        self.button_reset = QPushButton("Clear All")
+        self.button_reset = QPushButton(tr("Clear All"))
         self.button_reset.clicked.connect(self.reset_hotkey)
 
         self.button_toggle = QPushButton("")
@@ -122,7 +123,7 @@ class HotkeyList(QWidget):
     def set_enable_state(self, enabled: bool):
         """Set enable state"""
         self.button_toggle.setChecked(enabled)
-        self.button_toggle.setText("Enabled" if enabled else "Disabled")
+        self.button_toggle.setText(tr("Enabled") if enabled else tr("Disabled"))
         self.button_reset.setDisabled(not enabled)
         self.listbox_hotkey.setDisabled(not enabled)
 
@@ -136,7 +137,7 @@ class HotkeyList(QWidget):
     def add_hotkey_category(self, name: str):
         """Add hotkey category header"""
         item = QListWidgetItem()
-        label = QLabel(f"{name} Keybinding", self.listbox_hotkey)
+        label = QLabel(tr("{0} Keybinding").format(name), self.listbox_hotkey)
         label.setAlignment(Qt.AlignCenter)
         self.listbox_hotkey.addItem(item)
         self.listbox_hotkey.setItemWidget(item, label)
@@ -173,9 +174,9 @@ class HotkeyList(QWidget):
 
     def reset_hotkey(self):
         """Reset hotkey"""
-        msg_text = "Clear all key bindings?<br><br>This cannot be undone!"
+        msg_text = tr("Clear all key bindings?<br><br>This cannot be undone!")
         confirm_msg = QMessageBox.question(
-            self, "Confirm", msg_text,
+            self, tr("Confirm"), msg_text,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -243,7 +244,7 @@ class ConfigHotkey(BaseDialog):
 
     def __init__(self, parent, option_name: str, hotkey_name: str, reload_func: Callable):
         super().__init__(parent)
-        self.setWindowTitle(f"Key Binding - {format_option_name(option_name)}")
+        self.setWindowTitle(tr("Key Binding - {0}").format(format_option_name(option_name)))
 
         self.option_name = option_name
         self.hotkey_name = hotkey_name
@@ -269,7 +270,7 @@ class ConfigHotkey(BaseDialog):
             layout_main.addWidget(self.preset_selector)
 
         # Button
-        button_clear = QPushButton("Clear")
+        button_clear = QPushButton(tr("Clear"))
         button_clear.clicked.connect(self.reset)
 
         button_confirm = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
@@ -355,12 +356,10 @@ class ConfigHotkey(BaseDialog):
             if options["bind"] != temp_hotkey:
                 continue
             msg_text = (
-                f"<b>{format_hotkey_name(temp_hotkey)}</b> already used for """
-                f"<b>{format_option_name(option_name)}</b>.<br><br>"
-                "Are you sure to assign the same key anyway?"
+                tr("<b>{0}</b> already used for <b>{1}</b>.<br><br>Are you sure to assign the same key anyway?").format(format_hotkey_name(temp_hotkey), format_option_name(option_name))
             )
             confirm_msg = QMessageBox.question(
-                self, "Confirm", msg_text,
+                self, tr("Confirm"), msg_text,
                 buttons=QMessageBox.Yes | QMessageBox.Cancel,
                 defaultButton=QMessageBox.Cancel,
             )

@@ -29,6 +29,7 @@ GLOBAL_DEFAULT = {
         "version": __version__,
     },
     "application": {
+        "language": "zh_CN",
         "show_at_startup": True,
         "minimize_to_tray": PLATFORM.WINDOWS,
         "remember_position": True,

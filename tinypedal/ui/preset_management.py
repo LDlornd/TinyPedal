@@ -47,6 +47,7 @@ from PySide2.QtWidgets import (
 from .. import app_signal, cfg
 from .. import regex_pattern as rxp
 from ..constant import CONFIG, FILE
+from ..i18n import tr
 from ..formatter import format_option_name, strip_filename_extension
 from ..setting.default_shortcuts import SHORTCUTS_PRESET
 from ..setting.validator import PresetValidator
@@ -81,7 +82,7 @@ class CreatePreset(BaseDialog):
         # Entry box
         self.preset_entry = QLineEdit()
         self.preset_entry.setMaxLength(40)
-        self.preset_entry.setPlaceholderText("Enter a new preset name")
+        self.preset_entry.setPlaceholderText(tr("Enter a new preset name"))
         self.preset_entry.setValidator(QVAL_FILENAME)
 
         # Button
@@ -104,13 +105,13 @@ class CreatePreset(BaseDialog):
         filepath = cfg.path.settings
         # Check invalid file name
         if not is_allowed_filename(entered_filename):
-            QMessageBox.warning(self, "Error", "Invalid preset name.")
+            QMessageBox.warning(self, tr("Error"), tr("Invalid preset name."))
             return
         # Check existing preset
         temp_list = cfg.preset_files()
         for preset in temp_list:
             if entered_filename.lower() == preset.lower():
-                QMessageBox.warning(self, "Error", "Preset already exists.")
+                QMessageBox.warning(self, tr("Error"), tr("Preset already exists."))
                 return
         # Duplicate preset
         if self.edit_mode == "duplicate":
@@ -156,7 +157,7 @@ class RestoreBackup(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Restore Backup")
+        self.set_utility_title(tr("Restore Backup"))
         self.setMinimumSize(UIScaler.size(40), UIScaler.size(20))
 
         # Backup list
@@ -164,16 +165,16 @@ class RestoreBackup(BaseEditor):
         self.listbox_backup.setAlternatingRowColors(True)
 
         # Button
-        button_restore = CompactButton("Restore")
+        button_restore = CompactButton(tr("Restore"))
         button_restore.clicked.connect(self.restore)
 
-        button_refresh = CompactButton("Refresh")
+        button_refresh = CompactButton(tr("Refresh"))
         button_refresh.clicked.connect(self.refresh)
 
-        button_delete = CompactButton("Delete")
+        button_delete = CompactButton(tr("Delete"))
         button_delete.clicked.connect(self.delete)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         layout_button = QHBoxLayout()
@@ -215,8 +216,8 @@ class RestoreBackup(BaseEditor):
     def is_selected(self) -> bool:
         """Is file selected"""
         if not self.listbox_backup.selectedIndexes():
-            msg_text = "No backup file selected."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("No backup file selected.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return False
         return True
 
@@ -228,10 +229,9 @@ class RestoreBackup(BaseEditor):
         selected_item = self.listbox_backup.currentItem()
         selected_filename = selected_item.text()
         msg_text = (
-            f"Delete <b>{selected_filename}</b> preset permanently?<br><br>"
-            "This cannot be undone!"
+            tr("Delete <b>{0}</b> preset permanently?<br><br>This cannot be undone!").format(selected_filename)
         )
-        if self.confirm_operation(title="Delete Preset", message=msg_text):
+        if self.confirm_operation(title=tr("Delete Preset"), message=msg_text):
             full_path = f"{cfg.path.settings}{selected_filename}"
             if os.path.exists(full_path):
                 os.remove(full_path)
@@ -244,8 +244,8 @@ class RestoreBackup(BaseEditor):
 
         selected_item = self.listbox_backup.currentItem()
         if not selected_item.is_valid:
-            msg_text = "Selected backup file is invalid and cannot be restored."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("Selected backup file is invalid and cannot be restored.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
 
         selected_filename = selected_item.text()
@@ -253,12 +253,9 @@ class RestoreBackup(BaseEditor):
         # Style preset
         if selected_item.is_style:
             msg_text = (
-                f"<b>{selected_filename}</b> is a style preset.<br>"
-                "Restoring this backup file will overwrite existing style preset.<br><br>"
-                "Are you sure you want to restore and overwrite existing style preset?<br><br>"
-                "This cannot be undone!"
+                tr("<b>{0}</b> is a style preset.<br>Restoring this backup file will overwrite existing style preset.<br><br>Are you sure you want to restore and overwrite existing style preset?<br><br>This cannot be undone!").format(selected_filename)
             )
-            if self.confirm_operation(title="Restore Style Preset", message=msg_text):
+            if self.confirm_operation(title=tr("Restore Style Preset"), message=msg_text):
                 basename = selected_filename[:selected_filename.find(FILE.EXT_JSON)]
                 filepath = cfg.path.settings
                 shutil.move(
@@ -272,7 +269,7 @@ class RestoreBackup(BaseEditor):
         # User preset
         _dialog = CreatePreset(
             self,
-            title="Restore Backup",
+            title=tr("Restore Backup"),
             mode="restore",
             source_filename=selected_filename
         )
@@ -285,12 +282,12 @@ class PresetTransfer(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Preset Transfer")
+        self.set_utility_title(tr("Preset Transfer"))
         self.setMinimumSize(UIScaler.size(40), UIScaler.size(38))
 
         # Label
         self.loaded_preset = cfg.filename.setting[:-5]
-        label_loaded = QLabel(f"From: <b>{self.loaded_preset}</b>")
+        label_loaded = QLabel(tr("From: <b>{0}</b>").format(self.loaded_preset))
 
         # Setting list
         self.listbox_setting = QListWidget(self)
@@ -319,14 +316,14 @@ class PresetTransfer(BaseEditor):
         )
         self.set_setting_list(self.listbox_options, option_types)
         layout_dest = QHBoxLayout()
-        layout_dest.addWidget(QLabel("To:"))
+        layout_dest.addWidget(QLabel(tr("To:")))
         layout_dest.addWidget(self.dest_selector, stretch=1)
 
         # Button transfer
-        button_apply = CompactButton("Transfer")
+        button_apply = CompactButton(tr("Transfer"))
         button_apply.clicked.connect(self.transfer)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         layout_button = QHBoxLayout()
@@ -384,25 +381,23 @@ class PresetTransfer(BaseEditor):
     def transfer(self):
         """Transfer setting"""
         if not self.dest_selector.currentText():
-            msg_text = "No destination preset selected or found."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("No destination preset selected or found.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
         loaded_preset_name = f"{self.loaded_preset}.json"
         dest_preset_name = f"{self.dest_selector.currentText()}.json"
         setting_selection = tuple(self.get_setting_selection(self.listbox_setting))
         if not setting_selection:
-            msg_text = "No preset setting selected.<br><br>Select at least one setting and try again."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("No preset setting selected.<br><br>Select at least one setting and try again.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
         options_selection = tuple(self.get_setting_selection(self.listbox_options))
         if not options_selection:
-            msg_text = "No option type selected.<br><br>Select at least one option type and try again."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("No option type selected.<br><br>Select at least one option type and try again.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
         msg_text = (
-            f"Transfer selected settings from <b>{loaded_preset_name}</b>"
-            f" to <b>{dest_preset_name}</b>?<br><br>"
-            "This cannot be undone!"
+            tr("Transfer selected settings from <b>{0}</b> to <b>{1}</b>?<br><br>This cannot be undone!").format(loaded_preset_name, dest_preset_name)
         )
         if not self.confirm_operation(message=msg_text):
             return
@@ -423,10 +418,9 @@ class PresetTransfer(BaseEditor):
             max_attempts=cfg.max_saving_attempts,
         )
         msg_text = (
-            f"Settings are transferred from <b>{loaded_preset_name}</b>"
-            f" to <b>{dest_preset_name}</b>."
+            tr("Settings are transferred from <b>{0}</b> to <b>{1}</b>.").format(loaded_preset_name, dest_preset_name)
         )
-        QMessageBox.information(self, "Transfer Completed", msg_text)
+        QMessageBox.information(self, tr("Transfer Completed"), msg_text)
 
     def copy_setting(self, dest_dict: dict, setting_selection: tuple[str, ...], options_selection: tuple[str, ...]):
         """Copy setting"""
@@ -498,16 +492,16 @@ class ListHeader(QFrame):
         self._listbox = listbox
         self._title = title
 
-        button_selectall = CompactButton(" All ")
+        button_selectall = CompactButton(tr(" All "))
         button_selectall.clicked.connect(self.button_select_all)
 
-        button_deselectall = CompactButton("None")
+        button_deselectall = CompactButton(tr("None"))
         button_deselectall.clicked.connect(self.button_deselect_all)
 
         layout = QHBoxLayout()
         layout.setSpacing(0)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(QLabel(f"Select {title}"))
+        layout.addWidget(QLabel(tr("Select {0}").format(title)))
         layout.addWidget(button_selectall)
         layout.addWidget(button_deselectall)
         self.setLayout(layout)
@@ -515,13 +509,13 @@ class ListHeader(QFrame):
 
     def button_select_all(self):
         """Select all check box"""
-        msg_text = f"Select all {self._title}s from list?"
+        msg_text = tr("Select all {0}s from list?").format(self._title)
         if self._parent.confirm_operation(message=msg_text):
             self.set_selection(self._listbox, True)
 
     def button_deselect_all(self):
         """Deselect all check box"""
-        msg_text = f"Deselect all {self._title}s from list?"
+        msg_text = tr("Deselect all {0}s from list?").format(self._title)
         if self._parent.confirm_operation(message=msg_text):
             self.set_selection(self._listbox, False)
 

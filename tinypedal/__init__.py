@@ -263,6 +263,8 @@ def _init_globals(single_instance: bool, path_global: str):
     from .constant import CONFIG
     cfg.path.config = path_global
     cfg.load_global()
+    from .i18n import set_language
+    set_language(cfg.application["language"])
     cfg.save(config_type=CONFIG.TYPE_CONFIG)
     cfg.save(config_type=CONFIG.TYPE_SHORTCUTS)
     _clear_environment()

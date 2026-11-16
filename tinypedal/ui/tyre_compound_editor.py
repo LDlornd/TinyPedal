@@ -35,6 +35,7 @@ from PySide2.QtWidgets import (
 
 from .. import api, cfg
 from ..constant import CONFIG, HEATMAP
+from ..i18n import option_label, tr
 from ..userfile.heatmap import set_predefined_compound_symbol
 from ..userfile.json_setting import copy_setting
 from ._common import QVAL_COLOR, BaseEditor, CompactButton, TableBatchReplace, UIScaler
@@ -50,7 +51,7 @@ class TyreCompoundEditor(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Tyre Compound Editor")
+        self.set_utility_title(tr("Tyre Compound Editor"))
         self.setMinimumSize(UIScaler.size(42), UIScaler.size(38))
 
         self.compounds_temp = copy_setting(cfg.user.compounds)
@@ -58,7 +59,7 @@ class TyreCompoundEditor(BaseEditor):
         # Set table
         self.table_compounds = QTableWidget(self)
         self.table_compounds.setColumnCount(len(HEADER_COMPOUNDS))
-        self.table_compounds.setHorizontalHeaderLabels(HEADER_COMPOUNDS)
+        self.table_compounds.setHorizontalHeaderLabels([option_label(header) for header in HEADER_COMPOUNDS])
         self.table_compounds.verticalHeader().setSectionResizeMode(QHeaderView.Fixed)
         self.table_compounds.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         # Symbol column
@@ -87,28 +88,28 @@ class TyreCompoundEditor(BaseEditor):
 
     def set_layout_button(self):
         """Set button layout"""
-        button_add = CompactButton("Add")
+        button_add = CompactButton(tr("Add"))
         button_add.clicked.connect(self.add_compound)
 
-        button_sort = CompactButton("Sort")
+        button_sort = CompactButton(tr("Sort"))
         button_sort.clicked.connect(self.sort_compound)
 
-        button_delete = CompactButton("Delete")
+        button_delete = CompactButton(tr("Delete"))
         button_delete.clicked.connect(self.delete_compound)
 
-        button_replace = CompactButton("Replace")
+        button_replace = CompactButton(tr("Replace"))
         button_replace.clicked.connect(self.open_replace_dialog)
 
-        button_reset = CompactButton("Reset")
+        button_reset = CompactButton(tr("Reset"))
         button_reset.clicked.connect(self.reset_setting)
 
-        button_apply = CompactButton("Apply")
+        button_apply = CompactButton(tr("Apply"))
         button_apply.clicked.connect(self.applying)
 
-        button_save = CompactButton("Save")
+        button_save = CompactButton(tr("Save"))
         button_save.clicked.connect(self.saving)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.close)
 
         # Set layout
@@ -204,10 +205,10 @@ class TyreCompoundEditor(BaseEditor):
         """Delete compound entry"""
         selected_rows = {data.row() for data in self.table_compounds.selectedIndexes()}
         if not selected_rows:
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
 
-        if not self.confirm_operation(message="<b>Delete selected rows?</b>"):
+        if not self.confirm_operation(message=tr("<b>Delete selected rows?</b>")):
             return
 
         for row_index in sorted(selected_rows, reverse=True):
@@ -217,8 +218,7 @@ class TyreCompoundEditor(BaseEditor):
     def reset_setting(self):
         """Reset setting"""
         msg_text = (
-            "Reset <b>compounds preset</b> to default?<br><br>"
-            "Changes are only saved after clicking Apply or Save Button."
+            tr("Reset <b>compounds preset</b> to default?<br><br>Changes are only saved after clicking Apply or Save Button.")
         )
         if self.confirm_operation(message=msg_text):
             self.compounds_temp = copy_setting(cfg.default.compounds)

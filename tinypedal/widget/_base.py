@@ -33,6 +33,7 @@ from .. import app_signal, overlay_signal, realtime_state
 from ..configuration import Configuration
 from ..constant import APP
 from ..formatter import format_module_name
+from ..i18n import tr
 from ..regex_pattern import FONT_WEIGHT_MAP
 from ._common import FontMetrics, MousePosition
 from ._painter import RawImage, RawText
@@ -216,30 +217,30 @@ class Base(QWidget):
         show_name.setFont(show_name_font)
         menu.addSeparator()
 
-        menu.addAction("Config")
+        menu.addAction(tr("Config"))
         menu.addSeparator()
-        menu.addAction("Center Horizontally")
-        menu.addAction("Center Vertically")
+        menu.addAction(tr("Center Horizontally"))
+        menu.addAction(tr("Center Vertically"))
         menu.addSeparator()
-        menu.addAction("Reload")
-        menu.addAction("Disable")
+        menu.addAction(tr("Reload"))
+        menu.addAction(tr("Disable"))
 
         selected_action = menu.exec_(event.globalPos())
         if not selected_action:
             return
 
         action = selected_action.text()
-        if action == "Center Horizontally":
+        if action == tr("Center Horizontally"):
             self.move((self.screen().geometry().width() - self.width()) // 2, self.y())
             self.__save_position()
-        elif action == "Center Vertically":
+        elif action == tr("Center Vertically"):
             self.move(self.x(), (self.screen().geometry().height() - self.height()) // 2)
             self.__save_position()
-        elif action == "Config":
+        elif action == tr("Config"):
             config_widget(self.widget_name)
-        elif action == "Reload":
+        elif action == tr("Reload"):
             reload_widget(self.widget_name)
-        elif action == "Disable":
+        elif action == tr("Disable"):
             disable_widget(self.widget_name)
 
     def closeEvent(self, event):

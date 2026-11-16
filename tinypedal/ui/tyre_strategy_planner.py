@@ -52,6 +52,7 @@ from PySide2.QtWidgets import (
 
 from .. import cfg, state
 from ..constant import CONFIG, FILE
+from ..i18n import option_label, tr
 from ..formatter import format_option_name
 from ..userfile.tyre_strategy import (
     DEFAULT_TYRE_SET,
@@ -163,17 +164,15 @@ class TyrePlanTable(QTableWidget):
             if (same_index := self._same_row(tyre_name, row_index, column_index)) != column_index:
                 self.setItem(row_index, column_index, temp_item)
                 msg_text = (
-                    f"<b>{tyre_name}</b> already installed on <b>{HEADER_TYREPLAN[same_index]}</b> wheel.<br><br>"
-                    f"Cannot install the same tyre on two wheels at the same time."
+                    tr("<b>{0}</b> already installed on <b>{1}</b> wheel.<br><br>Cannot install the same tyre on two wheels at the same time.").format(tyre_name, HEADER_TYREPLAN[same_index])
                 )
-                QMessageBox.information(self, "Incorrect Tyre Allocation", msg_text)
+                QMessageBox.information(self, tr("Incorrect Tyre Allocation"), msg_text)
             elif self._restrict_allocation and (same_index := self._same_allocation(tyre_name, row_index, column_index)) != column_index:
                 self.setItem(row_index, column_index, temp_item)
                 msg_text = (
-                    f"<b>{tyre_name}</b> already used on <b>{HEADER_TYREPLAN[same_index]}</b> wheel.<br><br>"
-                    f"Cannot allocate already used tyre on a different wheel."
+                    tr("<b>{0}</b> already used on <b>{1}</b> wheel.<br><br>Cannot allocate already used tyre on a different wheel.").format(tyre_name, HEADER_TYREPLAN[same_index])
                 )
-                QMessageBox.information(self, "Incorrect Tyre Allocation", msg_text)
+                QMessageBox.information(self, tr("Incorrect Tyre Allocation"), msg_text)
             elif not self.cellWidget(row_index, column_index):
                 self._add_stats(row_index, column_index)
         else:  # ignore emptry drop
@@ -286,10 +285,10 @@ class TyrePlanTable(QTableWidget):
         """Set tyre change time"""
         item = self.item(row_index, column_index)
         if seconds <= 0:
-            text_time = "N/A"
+            text_time = tr("N/A")
             item.setFlags(Qt.NoItemFlags)
         else:
-            text_time = f"{seconds:+.1f}s"
+            text_time = tr("{0:+.1f}s").format(seconds)
             item.setFlags(Qt.ItemIsEnabled)
         item.setText(text_time)
 
@@ -470,7 +469,7 @@ class TyreSetItemTag(QWidget):
         else:
             color = "#777777"
         self._label_stints.setStyleSheet(f"background:{color}")
-        self._label_stints.setText(f"Stints: {stints}")
+        self._label_stints.setText(tr("Stints: {0}").format(stints))
 
 
 class TyrePlanItemTag(QWidget):
@@ -554,12 +553,12 @@ class TyreStatusBar(QStatusBar):
         stock_color = "color:#F20;" if tyre_stock > tyre_max else ""
         stock_invalid = " (invalid)" if stock_color else ""
         self._tyre_stock.setStyleSheet(stock_color)
-        self._tyre_stock.setText(f"Stock: {tyre_stock} / {tyre_max}{stock_invalid}")
-        self._tyre_used.setText(f"Used: {tyre_used}")
-        self._stints.setText(f"Stints: {stints}")
-        self._pit_stops.setText(f"Pits: {max(stints - 1, 0)}")
-        self._changes.setText(f"Changes: {changes}")
-        self._change_time.setText(f"Time: {change_time:+.2f}s")
+        self._tyre_stock.setText(tr("Stock: {0} / {1}{2}").format(tyre_stock, tyre_max, stock_invalid))
+        self._tyre_used.setText(tr("Used: {0}").format(tyre_used))
+        self._stints.setText(tr("Stints: {0}").format(stints))
+        self._pit_stops.setText(tr("Pits: {0}").format(max(stints - 1, 0)))
+        self._changes.setText(tr("Changes: {0}").format(changes))
+        self._change_time.setText(tr("Time: {0:+.2f}s").format(change_time))
 
 
 class TyreRulePanel(QFrame):
@@ -578,7 +577,7 @@ class TyreRulePanel(QFrame):
         self._max_tyre.setAlignment(Qt.AlignRight)
         self._max_tyre.valueChanged.connect(parent.update_tyre_status)
 
-        self._tyre_alloc = QCheckBox("Restrict Allocation")
+        self._tyre_alloc = QCheckBox(tr("Restrict Allocation"))
         self._tyre_alloc.setChecked(True)
         self._tyre_alloc.toggled.connect(parent.update_tyre_status)
 
@@ -594,14 +593,14 @@ class TyreRulePanel(QFrame):
         self._change_time_4 = self._add_tyre_time_spinbox(4)
         self._change_time_4.valueChanged.connect(parent.update_tyre_wear)
 
-        self._highlight_new = QCheckBox("Highlight New Tyre")
+        self._highlight_new = QCheckBox(tr("Highlight New Tyre"))
         self._highlight_new.setChecked(True)
         self._highlight_new.toggled.connect(parent.update_tyre_wear)
 
-        layout.addWidget(QLabel("Maximum Tyres"))
+        layout.addWidget(QLabel(tr("Maximum Tyres")))
         layout.addWidget(self._max_tyre)
         layout.addWidget(add_vertical_separator())
-        layout.addWidget(QLabel("Change Time"))
+        layout.addWidget(QLabel(tr("Change Time")))
         layout.addWidget(self._change_time_1)
         layout.addWidget(self._change_time_2)
         layout.addWidget(self._change_time_3)
@@ -678,10 +677,10 @@ class TyreSetPanel(QFrame):
         # Button top
         self._tyre_selector = QComboBox()
 
-        button_addtyre = CompactButton("Add")
+        button_addtyre = CompactButton(tr("Add"))
         button_addtyre.clicked.connect(parent.add_tyre_to_set)
 
-        button_config = CompactButton("Config")
+        button_config = CompactButton(tr("Config"))
         button_config.clicked.connect(parent.open_tyre_config_dialog)
 
         layout_top = QHBoxLayout()
@@ -692,19 +691,19 @@ class TyreSetPanel(QFrame):
         # Button low
         sort_menu = QMenu(self)
 
-        sort_by_tyre = sort_menu.addAction("Compound Type")
+        sort_by_tyre = sort_menu.addAction(tr("Compound Type"))
         sort_by_tyre.triggered.connect(tyre_set_list.sort_by_compound)
 
-        sort_by_uses = sort_menu.addAction("Number of Stints")
+        sort_by_uses = sort_menu.addAction(tr("Number of Stints"))
         sort_by_uses.triggered.connect(tyre_set_list.sort_by_stints)
 
-        button_sort = CompactButton("Sort By", has_menu=True)
+        button_sort = CompactButton(tr("Sort By"), has_menu=True)
         button_sort.setMenu(sort_menu)
 
-        button_remove = CompactButton("Remove")
+        button_remove = CompactButton(tr("Remove"))
         button_remove.clicked.connect(parent.remove_tyre_from_set)
 
-        button_clearall = CompactButton("Clear All")
+        button_clearall = CompactButton(tr("Clear All"))
         button_clearall.clicked.connect(parent.remove_all_tyres)
 
         layout_button = QHBoxLayout()
@@ -745,26 +744,26 @@ class TyrePlanPanel(QFrame):
         # Button top
         file_menu = QMenu(self)
 
-        new_file = file_menu.addAction("New File")
+        new_file = file_menu.addAction(tr("New File"))
         new_file.triggered.connect(parent.create_new_file)
 
         file_menu.addSeparator()
 
-        open_file = file_menu.addAction("Open File")
+        open_file = file_menu.addAction(tr("Open File"))
         open_file.triggered.connect(parent.load_from_file)
 
         file_menu.addSeparator()
 
-        save_as = file_menu.addAction("Save As...")
+        save_as = file_menu.addAction(tr("Save As..."))
         save_as.triggered.connect(parent.saving)
 
-        export_csv = file_menu.addAction("Export As...")
+        export_csv = file_menu.addAction(tr("Export As..."))
         export_csv.triggered.connect(parent.export_as_csv)
 
-        button_file = CompactButton("File", has_menu=True)
+        button_file = CompactButton(tr("File"), has_menu=True)
         button_file.setMenu(file_menu)
 
-        button_save = CompactButton("Save As")
+        button_save = CompactButton(tr("Save As"))
         button_save.clicked.connect(parent.saving)
 
         layout_top = QHBoxLayout()
@@ -773,22 +772,22 @@ class TyrePlanPanel(QFrame):
         layout_top.addWidget(button_save)
 
         # Button bottom
-        button_duplicate = CompactButton("Duplicate Row")
+        button_duplicate = CompactButton(tr("Duplicate Row"))
         button_duplicate.clicked.connect(parent.duplicate_row)
 
-        button_addnew = CompactButton("New Row")
+        button_addnew = CompactButton(tr("New Row"))
         button_addnew.clicked.connect(parent.add_new_row)
 
-        button_insertbelow = CompactButton("Insert Below")
+        button_insertbelow = CompactButton(tr("Insert Below"))
         button_insertbelow.clicked.connect(parent.insert_row_below)
 
-        button_insertabove = CompactButton("Insert Above")
+        button_insertabove = CompactButton(tr("Insert Above"))
         button_insertabove.clicked.connect(parent.insert_row_above)
 
-        button_delete = CompactButton("Delete Row")
+        button_delete = CompactButton(tr("Delete Row"))
         button_delete.clicked.connect(parent.delete_row)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(parent.close)
 
         layout_button = QHBoxLayout()
@@ -818,7 +817,7 @@ class TyreStrategyPlanner(BaseEditor):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Tyre Strategy Planner")
+        self.set_utility_title(tr("Tyre Strategy Planner"))
         self.setMinimumHeight(UIScaler.size(40))
 
         self.user_data = {}
@@ -841,7 +840,7 @@ class TyreStrategyPlanner(BaseEditor):
         tyre_plan.setShowGrid(False)
 
         tyre_plan.setColumnCount(len(HEADER_TYREPLAN))
-        tyre_plan.setHorizontalHeaderLabels(HEADER_TYREPLAN)
+        tyre_plan.setHorizontalHeaderLabels([option_label(header) for header in HEADER_TYREPLAN])
 
         tyre_plan.horizontalHeader().setSectionResizeMode(4, QHeaderView.Fixed)
         tyre_plan.setColumnWidth(4, UIScaler.size(5))
@@ -930,8 +929,8 @@ class TyreStrategyPlanner(BaseEditor):
             filename=filename,
         )
         if user_data is None:
-            msg_text = "Cannot open selected file.<br><br>Invalid tyre strategy file."
-            QMessageBox.warning(self, "Error", msg_text)
+            msg_text = tr("Cannot open selected file.<br><br>Invalid tyre strategy file.")
+            QMessageBox.warning(self, tr("Error"), msg_text)
             return
         self.user_data = user_data
         # Update file name
@@ -944,7 +943,7 @@ class TyreStrategyPlanner(BaseEditor):
         """Save tyre strategy file"""
         filename = self.tyre_plan_panel.filename()
         if not filename:
-            QMessageBox.warning(self, "Error", "Invalid file name.")
+            QMessageBox.warning(self, tr("Error"), tr("Invalid file name."))
             return
         filename_full = QFileDialog.getSaveFileName(
             self,
@@ -971,14 +970,14 @@ class TyreStrategyPlanner(BaseEditor):
         save_tyre_strategy_file_path(filepath)
         self.tyre_plan_panel.set_filename(os.path.splitext(filename)[0])
         self.set_unmodified()
-        msg_text = f"Tyre strategy file saved at:<br><b>{filename_full}</b>"
-        QMessageBox.information(self, "Saved", msg_text)
+        msg_text = tr("Tyre strategy file saved at:<br><b>{0}</b>").format(filename_full)
+        QMessageBox.information(self, tr("Saved"), msg_text)
 
     def export_as_csv(self):
         """Export tyre strategy as spreadsheet (CSV)"""
         filename = self.tyre_plan_panel.filename()
         if not filename:
-            QMessageBox.warning(self, "Error", "Invalid file name.")
+            QMessageBox.warning(self, tr("Error"), tr("Invalid file name."))
             return
         filename_full = QFileDialog.getSaveFileName(
             self,
@@ -1037,8 +1036,8 @@ class TyreStrategyPlanner(BaseEditor):
             filepath=filepath,
         )
         save_tyre_strategy_file_path(filepath)
-        msg_text = f"Tyre strategy file exported at:<br><b>{filename_full}</b>"
-        QMessageBox.information(self, "Exported", msg_text)
+        msg_text = tr("Tyre strategy file exported at:<br><b>{0}</b>").format(filename_full)
+        QMessageBox.information(self, tr("Exported"), msg_text)
 
     # Context menu
     def open_context_menu_tyre_list(self, position: QPoint):
@@ -1047,7 +1046,7 @@ class TyreStrategyPlanner(BaseEditor):
         if not tyre_list.itemAt(position):
             return
         menu = QMenu()
-        remove_from_set = menu.addAction("Remove Selected")
+        remove_from_set = menu.addAction(tr("Remove Selected"))
         selected_action = menu.exec_(tyre_list.mapToGlobal(position))
         if not selected_action:
             return
@@ -1060,13 +1059,13 @@ class TyreStrategyPlanner(BaseEditor):
         if not table.itemAt(position):
             return
         menu = QMenu()
-        remove_from_table = menu.addAction("Remove Selected")
-        duplicate_row = menu.addAction("Duplicate Row")
+        remove_from_table = menu.addAction(tr("Remove Selected"))
+        duplicate_row = menu.addAction(tr("Duplicate Row"))
         menu.addSeparator()
-        insert_above = menu.addAction("Insert Row Above")
-        insert_below = menu.addAction("Insert Row Below")
+        insert_above = menu.addAction(tr("Insert Row Above"))
+        insert_below = menu.addAction(tr("Insert Row Below"))
         menu.addSeparator()
-        delete_row = menu.addAction("Delete Row")
+        delete_row = menu.addAction(tr("Delete Row"))
         position += QPoint(table.verticalHeader().width(), table.horizontalHeader().height())
         selected_action = menu.exec_(table.mapToGlobal(position))
         if not selected_action:
@@ -1191,7 +1190,7 @@ class TyreStrategyPlanner(BaseEditor):
         """Add tyre to tyre set list"""
         tyre_key = self.tyre_set_panel.selected_tyre()
         if not tyre_key:
-            QMessageBox.warning(self, "Error", "Invalid tyre name.")
+            QMessageBox.warning(self, tr("Error"), tr("Invalid tyre name."))
             return
         self.tyre_set.add_tyre(tyre_key)
         self.update_tyre_status()
@@ -1200,11 +1199,10 @@ class TyreStrategyPlanner(BaseEditor):
         """Remove tyre from tyre set list and table"""
         items = self.tyre_set.selectedItems()
         if not items:
-            QMessageBox.warning(self, "Error", "No tyre selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No tyre selected."))
             return False
         msg_text = (
-            "<b>Remove selected tyre from list?</b><br><br>"
-            "Corresponding tyre will be removed from table."
+            tr("<b>Remove selected tyre from list?</b><br><br>Corresponding tyre will be removed from table.")
         )
         if self.confirm_operation(message=msg_text):
             self.tyre_set.remove_tyre(items)
@@ -1213,8 +1211,7 @@ class TyreStrategyPlanner(BaseEditor):
     def remove_all_tyres(self):
         """Remove all tyres from tyre set list and table"""
         msg_text = (
-            "<b>Remove all tyres from list?</b><br><br>"
-            "All allocated tyres will be removed from table."
+            tr("<b>Remove all tyres from list?</b><br><br>All allocated tyres will be removed from table.")
         )
         if self.confirm_operation(message=msg_text):
             self.tyre_set.clear()
@@ -1225,7 +1222,7 @@ class TyreStrategyPlanner(BaseEditor):
         """Remove selected tyres from table"""
         if not self.tyre_plan.hasFocus() or not self.tyre_plan.selectedIndexes():
             return
-        if self.confirm_operation(message="<b>Remove selected tyre from table?</b>"):
+        if self.confirm_operation(message=tr("<b>Remove selected tyre from table?</b>")):
             self.tyre_plan.remove_items()
 
     def add_new_row(self):
@@ -1243,14 +1240,14 @@ class TyreStrategyPlanner(BaseEditor):
     def duplicate_row(self):
         """Duplicate row"""
         if not self.tyre_plan.selectedIndexes():
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
         self.tyre_plan.duplicate_row()
 
     def delete_row(self):
         """Delete row"""
         if not self.tyre_plan.selectedIndexes():
-            QMessageBox.warning(self, "Error", "No data selected.")
+            QMessageBox.warning(self, tr("Error"), tr("No data selected."))
             return
-        if self.confirm_operation(message="<b>Delete selected row?</b>"):
+        if self.confirm_operation(message=tr("<b>Delete selected row?</b>")):
             self.tyre_plan.delete_row()

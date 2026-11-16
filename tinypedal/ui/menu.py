@@ -27,6 +27,7 @@ from PySide2.QtWidgets import QMenu, QMessageBox
 
 from .. import api, app_signal, cfg, mctrl, octrl, updater
 from ..constant import API, APP, CONFIG, PLATFORM
+from ..i18n import tr
 from ..formatter import format_option_name
 from .about import About
 from .brake_editor import BrakeEditor
@@ -82,47 +83,47 @@ class OverlayMenu(QMenu):
             self.aboutToShow.connect(self.refresh_preset_name)
             self.addSeparator()
 
-            app_config = self.addAction("Config")
+            app_config = self.addAction(tr("Config"))
             app_config.triggered.connect(parent.show_app)
             self.addSeparator()
 
         # Lock overlay
-        self.overlay_lock = self.addAction("Lock Overlay")
+        self.overlay_lock = self.addAction(tr("Lock Overlay"))
         self.overlay_lock.setCheckable(True)
         self.overlay_lock.triggered.connect(self.is_locked)
 
         # Auto hide
-        self.overlay_hide = self.addAction("Auto Hide")
+        self.overlay_hide = self.addAction(tr("Auto Hide"))
         self.overlay_hide.setCheckable(True)
         self.overlay_hide.triggered.connect(self.is_hidden)
 
         # Grid move
-        self.overlay_grid = self.addAction("Grid Move")
+        self.overlay_grid = self.addAction(tr("Grid Move"))
         self.overlay_grid.setCheckable(True)
         self.overlay_grid.triggered.connect(self.has_grid)
 
         # VR Compatbiility
-        self.overlay_vr = self.addAction("VR Compatibility")
+        self.overlay_vr = self.addAction(tr("VR Compatibility"))
         self.overlay_vr.setCheckable(True)
         self.overlay_vr.triggered.connect(self.vr_compatibility)
 
         # Combined mode
-        self.overlay_mode = self.addAction("Combined Mode")
+        self.overlay_mode = self.addAction(tr("Combined Mode"))
         self.overlay_mode.setCheckable(True)
         self.overlay_mode.triggered.connect(self.combined_mode)
 
         # Reload preset (check for opened config dialog)
-        reload_preset = self.addAction("Reload")
+        reload_preset = self.addAction(tr("Reload"))
         reload_preset.triggered.connect(parent.reload_preset)
         self.addSeparator()
 
         # Reset submenu
-        menu_reset_data = ResetDataMenu("Reset Data", parent)
+        menu_reset_data = ResetDataMenu(tr("Reset Data"), parent)
         self.addMenu(menu_reset_data)
         self.addSeparator()
 
         # Quit
-        app_quit = self.addAction("Quit")
+        app_quit = self.addAction(tr("Quit"))
         app_quit.triggered.connect(parent.quit_app)
 
         # Refresh menu
@@ -172,14 +173,14 @@ class OverlayMenu(QMenu):
         """Check combined mode state"""
         combined_mode = cfg.overlay["combined_mode"]
         if combined_mode:
-            state = "Disable"
-            desc = "Each <b>Widget</b> will be displayed in separate window."
+            state = tr("Disable")
+            desc = tr("Each <b>Widget</b> will be displayed in separate window.")
         else:
-            state = "Enable"
-            desc = "All <b>Widgets</b> will be combined and drawn in one single maximized window."
-        msg_text = f"{state} <b>Overlay Combined Mode</b>?<br><br>{desc}"
+            state = tr("Enable")
+            desc = tr("All <b>Widgets</b> will be combined and drawn in one single maximized window.")
+        msg_text = tr("{0} <b>Overlay Combined Mode</b>?<br><br>{1}").format(state, desc)
         toggle_msg = QMessageBox.question(
-            self._parent, "Overlay Combined Mode", msg_text,
+            self._parent, tr("Overlay Combined Mode"), msg_text,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -197,22 +198,22 @@ class ResetDataMenu(QMenu):
         super().__init__(title, parent)
         self._parent = parent
 
-        reset_deltabest = self.addAction("Delta Best")
+        reset_deltabest = self.addAction(tr("Delta Best"))
         reset_deltabest.triggered.connect(self.reset_deltabest)
 
-        reset_energydelta = self.addAction("Energy Delta")
+        reset_energydelta = self.addAction(tr("Energy Delta"))
         reset_energydelta.triggered.connect(self.reset_energydelta)
 
-        reset_fueldelta = self.addAction("Fuel Delta")
+        reset_fueldelta = self.addAction(tr("Fuel Delta"))
         reset_fueldelta.triggered.connect(self.reset_fueldelta)
 
-        reset_consumption = self.addAction("Consumption History")
+        reset_consumption = self.addAction(tr("Consumption History"))
         reset_consumption.triggered.connect(self.reset_consumption)
 
-        reset_sectorbest = self.addAction("Sector Best")
+        reset_sectorbest = self.addAction(tr("Sector Best"))
         reset_sectorbest.triggered.connect(self.reset_sectorbest)
 
-        reset_trackmap = self.addAction("Track Map")
+        reset_trackmap = self.addAction(tr("Track Map"))
         reset_trackmap.triggered.connect(self.reset_trackmap)
 
     def reset_deltabest(self):
@@ -282,18 +283,16 @@ class ResetDataMenu(QMenu):
         if not os.path.exists(filename_full):
             QMessageBox.warning(
                 self._parent,
-                "Error",
-                f"No {data_type} data found.<br><br>You can only reset data from active session.",
+                tr("Error"),
+                tr("No {0} data found.<br><br>You can only reset data from active session.").format(data_type),
             )
             return False
         # Confirm reset
         msg_text = (
-            f"Reset <b>{data_type}</b> data for<br>"
-            f"<b>{filename}</b> ?<br><br>"
-            "This cannot be undone!"
+            tr("Reset <b>{0}</b> data for<br><b>{1}</b> ?<br><br>This cannot be undone!").format(data_type, filename)
         )
         delete_msg = QMessageBox.question(
-            self._parent, f"Reset {data_type.title()}", msg_text,
+            self._parent, tr("Reset {0}").format(data_type.title()), msg_text,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -303,8 +302,8 @@ class ResetDataMenu(QMenu):
         os.remove(filename_full)
         QMessageBox.information(
             self._parent,
-            f"Reset {data_type.title()}",
-            f"{data_type.capitalize()} data has been reset for<br><b>{filename}</b>",
+            tr("Reset {0}").format(data_type.title()),
+            tr("{0} data has been reset for<br><b>{1}</b>").format(data_type.capitalize(), filename),
         )
         return True
 
@@ -316,30 +315,45 @@ class ConfigMenu(QMenu):
         super().__init__(title, parent)
         self._parent = parent
 
-        config_app = self.addAction("Application")
+        config_app = self.addAction(tr("Application"))
         config_app.triggered.connect(self.open_config_application)
 
-        config_compat = self.addAction("Compatibility")
+        language_menu = self.addMenu(tr("Language (restart)"))
+        for label, language in (("简体中文", "zh_CN"), ("English", "en")):
+            action = language_menu.addAction(label)
+            action.setCheckable(True)
+            action.setChecked(cfg.application["language"] == language)
+            action.triggered.connect(
+                lambda checked=False, code=language: self.change_language(code))
+
+        config_compat = self.addAction(tr("Compatibility"))
         config_compat.triggered.connect(self.open_config_compatibility)
 
-        config_notify = self.addAction("Notification")
+        config_notify = self.addAction(tr("Notification"))
         config_notify.triggered.connect(self.open_config_notification)
         self.addSeparator()
 
-        config_units = self.addAction("Units")
+        config_units = self.addAction(tr("Units"))
         config_units.triggered.connect(self.open_config_units)
 
-        config_font = self.addAction("Global Font Override")
+        config_font = self.addAction(tr("Global Font Override"))
         config_font.triggered.connect(self.open_config_font)
         self.addSeparator()
 
-        config_userpath = self.addAction("User Path")
+        config_userpath = self.addAction(tr("User Path"))
         config_userpath.triggered.connect(self.open_config_userpath)
 
-        open_folder = self.addMenu("Open Folder")
+        open_folder = self.addMenu(tr("Open Folder"))
         for path_name in cfg.path.__slots__:
             _folder = open_folder.addAction(format_option_name(path_name))
             _folder.triggered.connect(lambda checked=True, p=path_name: self.open_folder(checked, p))
+
+    def change_language(self, language: str):
+        """保存语言并通过现有重启流程重建窗口。"""
+        if language != cfg.application["language"]:
+            cfg.application["language"] = language
+            cfg.save(config_type=CONFIG.TYPE_CONFIG)
+            app_signal.restart.emit(True)
 
     def open_folder(self, checked: bool, path_name: str):
         """Open folder in file manager"""
@@ -360,8 +374,8 @@ class ConfigMenu(QMenu):
         if error:
             QMessageBox.warning(
                 self._parent,
-                "Error",
-                f"Cannot open folder:<br><b>{filepath}</b>",
+                tr("Error"),
+                tr("Cannot open folder:<br><b>{0}</b>").format(filepath),
             )
 
     def open_config_application(self):
@@ -457,23 +471,23 @@ class APIMenu(QMenu):
         self.actions_api = self.__api_selector()
         self.addSeparator()
 
-        self.api_selection = self.addAction("Remember API Selection from Preset")
+        self.api_selection = self.addAction(tr("Remember API Selection from Preset"))
         self.api_selection.setCheckable(True)
         self.api_selection.triggered.connect(self.toggle_api_selection)
 
-        self.legacy_api = self.addAction("Enable Legacy API Selection")
+        self.legacy_api = self.addAction(tr("Enable Legacy API Selection"))
         self.legacy_api.setCheckable(True)
         self.legacy_api.triggered.connect(self.toggle_legacy_api)
 
-        self.carsetup_backup = self.addAction("Enable Auto Backup Car Setup")
+        self.carsetup_backup = self.addAction(tr("Enable Auto Backup Car Setup"))
         self.carsetup_backup.setCheckable(True)
         self.carsetup_backup.triggered.connect(self.toggle_carsetup_backup)
 
-        config_api = self.addAction("Options")
+        config_api = self.addAction(tr("Options"))
         config_api.triggered.connect(self.open_config_api)
         self.addSeparator()
 
-        restart_api = self.addAction("Restart API")
+        restart_api = self.addAction(tr("Restart API"))
         restart_api.triggered.connect(menu_restart_api)
 
     def refresh_menu(self):
@@ -557,38 +571,38 @@ class ToolsMenu(QMenu):
         super().__init__(title, parent)
         self._parent = parent
 
-        utility_fuelcalc = self.addAction("Fuel Calculator")
+        utility_fuelcalc = self.addAction(tr("Fuel Calculator"))
         utility_fuelcalc.triggered.connect(self.open_utility_fuelcalc)
 
-        utility_tyreplanner = self.addAction("Tyre Strategy Planner")
+        utility_tyreplanner = self.addAction(tr("Tyre Strategy Planner"))
         utility_tyreplanner.triggered.connect(self.open_utility_tyreplanner)
 
-        utility_driverstats = self.addAction("Driver Stats Viewer")
+        utility_driverstats = self.addAction(tr("Driver Stats Viewer"))
         utility_driverstats.triggered.connect(self.open_utility_driverstats)
 
-        utility_mapviewer = self.addAction("Track Map Viewer")
+        utility_mapviewer = self.addAction(tr("Track Map Viewer"))
         utility_mapviewer.triggered.connect(self.open_utility_mapviewer)
         self.addSeparator()
 
-        editor_heatmap = self.addAction("Heatmap Editor")
+        editor_heatmap = self.addAction(tr("Heatmap Editor"))
         editor_heatmap.triggered.connect(self.open_editor_heatmap)
 
-        editor_brakes = self.addAction("Brake Editor")
+        editor_brakes = self.addAction(tr("Brake Editor"))
         editor_brakes.triggered.connect(self.open_editor_brakes)
 
-        editor_compounds = self.addAction("Tyre Compound Editor")
+        editor_compounds = self.addAction(tr("Tyre Compound Editor"))
         editor_compounds.triggered.connect(self.open_editor_compounds)
 
-        editor_brands = self.addAction("Vehicle Brand Editor")
+        editor_brands = self.addAction(tr("Vehicle Brand Editor"))
         editor_brands.triggered.connect(self.open_editor_brands)
 
-        editor_classes = self.addAction("Vehicle Class Editor")
+        editor_classes = self.addAction(tr("Vehicle Class Editor"))
         editor_classes.triggered.connect(self.open_editor_classes)
 
-        editor_trackinfo = self.addAction("Track Info Editor")
+        editor_trackinfo = self.addAction(tr("Track Info Editor"))
         editor_trackinfo.triggered.connect(self.open_editor_trackinfo)
 
-        editor_tracknotes = self.addAction("Track Notes Editor")
+        editor_tracknotes = self.addAction(tr("Track Notes Editor"))
         editor_tracknotes.triggered.connect(self.open_editor_tracknotes)
 
     def open_utility_fuelcalc(self):
@@ -652,24 +666,24 @@ class WindowMenu(QMenu):
 
     def __init__(self, title, parent):
         super().__init__(title, parent)
-        self.show_at_startup = self.addAction("Show at Startup")
+        self.show_at_startup = self.addAction(tr("Show at Startup"))
         self.show_at_startup.setCheckable(True)
         self.show_at_startup.triggered.connect(self.is_show_at_startup)
 
-        self.minimize_to_tray = self.addAction("Minimize to Tray")
+        self.minimize_to_tray = self.addAction(tr("Minimize to Tray"))
         self.minimize_to_tray.setCheckable(True)
         self.minimize_to_tray.triggered.connect(self.is_minimize_to_tray)
 
-        self.remember_position = self.addAction("Remember Position")
+        self.remember_position = self.addAction(tr("Remember Position"))
         self.remember_position.setCheckable(True)
         self.remember_position.triggered.connect(self.is_remember_position)
 
-        self.remember_size = self.addAction("Remember Size")
+        self.remember_size = self.addAction(tr("Remember Size"))
         self.remember_size.setCheckable(True)
         self.remember_size.triggered.connect(self.is_remember_size)
         self.addSeparator()
 
-        restart_app = self.addAction("Restart TinyPedal")
+        restart_app = self.addAction(tr("Restart TinyPedal"))
         restart_app.triggered.connect(parent.restart_app)
 
         self.aboutToShow.connect(self.refresh_menu)
@@ -711,21 +725,21 @@ class HelpMenu(QMenu):
         super().__init__(title, parent)
         self._parent = parent
 
-        app_guide = self.addAction("User Guide")
+        app_guide = self.addAction(tr("User Guide"))
         app_guide.triggered.connect(self.open_user_guide)
 
-        app_faq = self.addAction("Frequently Asked Questions")
+        app_faq = self.addAction(tr("Frequently Asked Questions"))
         app_faq.triggered.connect(self.open_faq)
 
-        app_log = self.addAction("Show Log")
+        app_log = self.addAction(tr("Show Log"))
         app_log.triggered.connect(self.show_log)
         self.addSeparator()
 
-        app_update = self.addAction("Check for Updates")
+        app_update = self.addAction(tr("Check for Updates"))
         app_update.triggered.connect(self.show_update)
         self.addSeparator()
 
-        app_about = self.addAction("About")
+        app_about = self.addAction(tr("About"))
         app_about.triggered.connect(self.show_about)
 
     def show_about(self):

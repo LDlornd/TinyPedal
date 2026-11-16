@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
 
 from .. import log_stream
 from ..constant import FILE
+from ..i18n import tr
 from ._common import BaseDialog, CompactButton, UIScaler, singleton_dialog
 
 
@@ -42,7 +43,7 @@ class LogInfo(BaseDialog):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.set_utility_title("Log")
+        self.set_utility_title(tr("Log"))
 
         self._update_timer = QBasicTimer()
         self.last_position = -1
@@ -54,24 +55,24 @@ class LogInfo(BaseDialog):
         self.refresh_log()
 
         # Check box
-        checkbox_autorefresh = QCheckBox("Auto Refresh")
+        checkbox_autorefresh = QCheckBox(tr("Auto Refresh"))
         checkbox_autorefresh.setChecked(False)
         checkbox_autorefresh.toggled.connect(self.toggle_auto_refresh)
 
         # Button
-        button_save = CompactButton("Save")
+        button_save = CompactButton(tr("Save"))
         button_save.clicked.connect(self.save_log)
 
-        button_copy = CompactButton("Copy")
+        button_copy = CompactButton(tr("Copy"))
         button_copy.clicked.connect(self.copy_log)
 
-        button_clear = CompactButton("Clear")
+        button_clear = CompactButton(tr("Clear"))
         button_clear.clicked.connect(self.clear_log)
 
-        self.button_refresh = CompactButton("Refresh")
+        self.button_refresh = CompactButton(tr("Refresh"))
         self.button_refresh.clicked.connect(self.refresh_log)
 
-        button_close = CompactButton("Close")
+        button_close = CompactButton(tr("Close"))
         button_close.clicked.connect(self.reject)
 
         # Layout
@@ -113,7 +114,7 @@ class LogInfo(BaseDialog):
 
     def clear_log(self):
         """Clear log"""
-        if self.confirm_operation(message="Clear all log?"):
+        if self.confirm_operation(message=tr("Clear all log?")):
             log_stream.truncate(0)
             log_stream.seek(0)
             self.refresh_log()
@@ -122,7 +123,7 @@ class LogInfo(BaseDialog):
         """Copy log"""
         self.log_view.selectAll()
         self.log_view.copy()
-        QMessageBox.information(self, "Copy", "Copied all log to Clipboard.")
+        QMessageBox.information(self, tr("Copy"), tr("Copied all log to Clipboard."))
 
     def save_log(self):
         """Save log"""

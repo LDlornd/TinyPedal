@@ -48,6 +48,7 @@ from PySide2.QtWidgets import (
 from .. import cfg
 from .. import regex_pattern as rxp
 from ..constant import CONFIG
+from ..i18n import tr
 from ..formatter import format_option_name
 from ._common import (
     QVAL_COLOR,
@@ -89,7 +90,7 @@ class FontConfig(BaseDialog):
 
     def __init__(self, parent, user_setting: dict, reload_func: Callable):
         super().__init__(parent)
-        self.set_config_title("Global Font Override", cfg.filename.setting)
+        self.set_config_title(tr("Global Font Override"), cfg.filename.setting)
 
         self.reloading = reload_func
         self.user_setting = user_setting
@@ -119,15 +120,15 @@ class FontConfig(BaseDialog):
 
         layout_option = QGridLayout()
         layout_option.setAlignment(Qt.AlignTop)
-        layout_option.addWidget(QLabel("Font Name"), 0, 0)
+        layout_option.addWidget(QLabel(tr("Font Name")), 0, 0)
         layout_option.addWidget(self.edit_fontname, 0, 1)
-        layout_option.addWidget(QLabel("Font Size Addend"), 1, 0)
+        layout_option.addWidget(QLabel(tr("Font Size Addend")), 1, 0)
         layout_option.addWidget(self.edit_fontsize, 1, 1)
-        layout_option.addWidget(QLabel("Font Weight"), 2, 0)
+        layout_option.addWidget(QLabel(tr("Font Weight")), 2, 0)
         layout_option.addWidget(self.edit_fontweight, 2, 1)
-        layout_option.addWidget(QLabel("Enable Auto Font Offset"), 3, 0)
+        layout_option.addWidget(QLabel(tr("Enable Auto Font Offset")), 3, 0)
         layout_option.addWidget(self.edit_autooffset, 3, 1)
-        layout_option.addWidget(QLabel("Font Offset Vertical Addend"), 4, 0)
+        layout_option.addWidget(QLabel(tr("Font Offset Vertical Addend")), 4, 0)
         layout_option.addWidget(self.edit_fontoffset, 4, 1)
 
         # Button
@@ -268,11 +269,11 @@ class UserConfig(BaseDialog):
         auto_complete_search.setCaseSensitivity(Qt.CaseInsensitive)
 
         edit_search = QLineEdit(self)
-        edit_search.setPlaceholderText(" Type here to search options")
+        edit_search.setPlaceholderText(tr(" Type here to search options"))
         edit_search.setCompleter(auto_complete_search)
         edit_search.textChanged.connect(self.search_options)
 
-        button_clearsearch = CompactButton("Clear")
+        button_clearsearch = CompactButton(tr("Clear"))
         button_clearsearch.clicked.connect(edit_search.clear)
         button_clearsearch.setFocusPolicy(Qt.NoFocus)
 
@@ -283,7 +284,7 @@ class UserConfig(BaseDialog):
         # Button
         has_display_order = (config_type == CONFIG.TYPE_WIDGET and self.has_display_order())
         if has_display_order:
-            button_display_order = QPushButton("Configure Display Order")
+            button_display_order = QPushButton(tr("Configure Display Order"))
             button_display_order.clicked.connect(self.open_display_order)
 
         button_reset = QDialogButtonBox(QDialogButtonBox.Reset)
@@ -338,7 +339,7 @@ class UserConfig(BaseDialog):
         for row_index in range(layout_option.rowCount()):
             label = layout_option.itemAtPosition(row_index, 0).widget()
             option = layout_option.itemAtPosition(row_index, 1).widget()
-            hidden = text not in label.text().lower()
+            hidden = text not in (label.text() + " " + label.toolTip()).lower()
             label.setHidden(hidden)
             option.setHidden(hidden)
 
@@ -371,10 +372,9 @@ class UserConfig(BaseDialog):
     def reset_setting(self):
         """Reset setting"""
         msg_text = (
-            f"Reset all <b>{format_option_name(self.key_name)}</b> options to default?<br><br>"
-            "Changes are only saved after clicking Apply or Save Button."
+            tr("Reset all <b>{0}</b> options to default?<br><br>Changes are only saved after clicking Apply or Save Button.").format(format_option_name(self.key_name))
         )
-        if self.confirm_operation(title="Reset Options", message=msg_text):
+        if self.confirm_operation(title=tr("Reset Options"), message=msg_text):
             for key, editor in self.option_edit.items():
                 if key != "enable":
                     editor.reset_to_default()
@@ -407,10 +407,9 @@ class UserConfig(BaseDialog):
     def value_error_message(self, option_name: str):
         """Value error message"""
         msg_text = (
-            f"Invalid value for <b>{format_option_name(option_name)}</b> option."
-            "<br><br>Changes are not saved."
+            tr("Invalid value for <b>{0}</b> option.<br><br>Changes are not saved.").format(format_option_name(option_name))
         )
-        QMessageBox.warning(self, "Error", msg_text)
+        QMessageBox.warning(self, tr("Error"), msg_text)
 
     def create_options(self, layout: QGridLayout, option_word_set: set[str]):
         """Create options"""
@@ -430,7 +429,9 @@ class UserConfig(BaseDialog):
             # Option name
             option_name = format_option_name(key)
             option_word_set.update(option_name.split())
+            option_word_set.add(key)
             self._add_option_label(row_index, option_name, layout)
+            layout.itemAtPosition(row_index, COLUMN_LABEL).widget().setToolTip(key)
             # Bool
             if re.search(rxp.CFG_BOOL, key):
                 self._add_option_bool(row_index, key, layout)

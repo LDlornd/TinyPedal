@@ -27,6 +27,7 @@ import re
 from functools import lru_cache
 
 from .constant import DATA
+from .i18n import option_label
 from .regex_pattern import ABBR_PATTERN, rex_invalid_char
 
 
@@ -42,21 +43,21 @@ def upper_matched_abbr(matchobj: re.Match) -> str:
 
 def format_module_name(name: str) -> str:
     """Format widget & module name"""
-    return uppercase_abbr(
+    return option_label(uppercase_abbr(
         name
         .replace("module_", "")
         .replace("_", " ")
         .title()
-    )
+    ))
 
 
 def format_option_name(name: str) -> str:
     """Format option name"""
-    return uppercase_abbr(
+    return option_label(uppercase_abbr(
         name
         .replace("_", " ")
         .title()
-    )
+    ))
 
 
 def strip_filename_extension(name: str, extension: str) -> str:

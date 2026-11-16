@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
 
 from .. import api, cfg, updater
 from ..constant import API, APP, PLATFORM
+from ..i18n import tr
 
 
 class NotifyBar(QWidget):
@@ -40,19 +41,19 @@ class NotifyBar(QWidget):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.presetlocked = QPushButton("Preset Locked")
+        self.presetlocked = QPushButton(tr("Preset Locked"))
         self.presetlocked.setVisible(False)
 
-        self.spectate = QPushButton("Spectate Mode Enabled")
+        self.spectate = QPushButton(tr("Spectate Mode Enabled"))
         self.spectate.setVisible(False)
 
-        self.pacenotes = QPushButton("Pace Notes Playback Enabled")
+        self.pacenotes = QPushButton(tr("Pace Notes Playback Enabled"))
         self.pacenotes.setVisible(False)
 
-        self.hotkey = QPushButton("Global Hotkey Enabled")
+        self.hotkey = QPushButton(tr("Global Hotkey Enabled"))
         self.hotkey.setVisible(False)
 
-        self.carsetup = QPushButton("Auto Backup Car Setup Enabled")
+        self.carsetup = QPushButton(tr("Auto Backup Car Setup Enabled"))
         self.carsetup.setVisible(False)
 
         self.updates = UpdatesNotifyButton("")
@@ -112,13 +113,13 @@ class NotifyBar(QWidget):
         )
         if self.hotkey.isVisible():
             if PLATFORM.WINDOWS:
-                self.hotkey.setText("Global Hotkey Enabled")
+                self.hotkey.setText(tr("Global Hotkey Enabled"))
                 self.hotkey.setStyleSheet(
                     f"color: {cfg.notification['font_color_global_hotkey']};"
                     f"background: {cfg.notification['background_color_global_hotkey']};"
                 )
             else:
-                self.hotkey.setText("Global Hotkey Unavailable")
+                self.hotkey.setText(tr("Global Hotkey Unavailable"))
                 self.hotkey.setStyleSheet("color: #FFF;background: #555;")
 
         # Auto backup car setup
@@ -128,10 +129,10 @@ class NotifyBar(QWidget):
         )
         if self.carsetup.isVisible():
             if api.name == API.NAME_ACC:
-                self.carsetup.setText("Auto Backup Car Setup Unavailable")
+                self.carsetup.setText(tr("Auto Backup Car Setup Unavailable"))
                 self.carsetup.setStyleSheet("color: #FFF;background: #555;")
             else:
-                self.carsetup.setText("Auto Backup Car Setup Enabled")
+                self.carsetup.setText(tr("Auto Backup Car Setup Enabled"))
                 self.carsetup.setStyleSheet(
                     f"color: {cfg.notification['font_color_auto_backup_car_setup']};"
                     f"background: {cfg.notification['background_color_auto_backup_car_setup']};"
@@ -145,11 +146,11 @@ class UpdatesNotifyButton(QPushButton):
         super().__init__(text, parent)
         version_menu = QMenu(self)
 
-        view_update = version_menu.addAction("View Updates On GitHub")
+        view_update = version_menu.addAction(tr("View Updates On GitHub"))
         view_update.triggered.connect(self.open_release)
         version_menu.addSeparator()
 
-        dismiss_msg = version_menu.addAction("Dismiss")
+        dismiss_msg = version_menu.addAction(tr("Dismiss"))
         dismiss_msg.triggered.connect(self.hide)
 
         self.setMenu(version_menu)
@@ -163,7 +164,7 @@ class UpdatesNotifyButton(QPushButton):
         """Checking updates"""
         if checking:
             # Show checking message only with manual checking
-            self.setText("Checking For Updates...")
+            self.setText(tr("Checking For Updates..."))
             self.setVisible(updater.is_manual())
         else:
             # Hide message if no unpdates and not manual checking

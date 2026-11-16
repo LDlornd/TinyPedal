@@ -40,6 +40,7 @@ import tinypedal
 
 from .. import api, app_signal, cfg, mctrl, wctrl
 from ..constant import APP, CONFIG
+from ..i18n import tr
 from ._common import BaseDialog, UIScaler
 from ._style import set_style_palette, set_style_window
 from .hotkey_view import HotkeyList
@@ -74,12 +75,12 @@ class TabView(QWidget):
         hotkey_tab = HotkeyList(self)
 
         self._tabs = QTabWidget(self)
-        self._tabs.addTab(widget_tab, "Widget")  # 0
-        self._tabs.addTab(module_tab, "Module")  # 1
-        self._tabs.addTab(preset_tab, "Preset")  # 2
-        self._tabs.addTab(spectate_tab, "Spectate")  # 3
-        self._tabs.addTab(pacenotes_tab, "Pacenotes")  # 4
-        self._tabs.addTab(hotkey_tab, "Hotkey")  # 5
+        self._tabs.addTab(widget_tab, tr("Widget"))  # 0
+        self._tabs.addTab(module_tab, tr("Module"))  # 1
+        self._tabs.addTab(preset_tab, tr("Preset"))  # 2
+        self._tabs.addTab(spectate_tab, tr("Spectate"))  # 3
+        self._tabs.addTab(pacenotes_tab, tr("Pacenotes"))  # 4
+        self._tabs.addTab(hotkey_tab, tr("Hotkey"))  # 5
         self._tabs.currentChanged.connect(self.refresh)
 
         # Main view
@@ -134,15 +135,15 @@ class StatusButtonBar(QStatusBar):
         self.button_api = QPushButton("")
         self.button_api.setObjectName("statusBarButtonAPI")
         self.button_api.clicked.connect(self.refresh)
-        self.button_api.setToolTip("Config Telemetry API")
+        self.button_api.setToolTip(tr("Config Telemetry API"))
 
         self.button_style = QPushButton("")
         self.button_style.clicked.connect(self.toggle_color_theme)
-        self.button_style.setToolTip("Toggle Window Color Theme")
+        self.button_style.setToolTip(tr("Toggle Window Color Theme"))
 
         self.button_dpiscale = QPushButton("")
         self.button_dpiscale.clicked.connect(self.toggle_dpi_scaling)
-        self.button_dpiscale.setToolTip("Toggle High DPI Scaling")
+        self.button_dpiscale.setToolTip(tr("Toggle High DPI Scaling"))
         self._last_dpi_scaling = cfg.application["enable_high_dpi_scaling"]
 
         self.addPermanentWidget(self.button_api)
@@ -155,37 +156,36 @@ class StatusButtonBar(QStatusBar):
     def refresh(self):
         """Refresh status bar"""
         if cfg.api["enable_active_state_override"]:
-            text_api_status = "overriding"
+            text_api_status = tr("overriding")
         else:
             text_api_status = api.read.state.version()
-        self.button_api.setText(f"API: {api.alias} ({text_api_status})")
+        self.button_api.setText(tr("API: {0} ({1})").format(api.alias, text_api_status))
 
-        self.button_style.setText(f"UI: {cfg.application['window_color_theme']}")
+        self.button_style.setText(tr("UI: {0}").format(cfg.application['window_color_theme']))
 
         if cfg.application["enable_high_dpi_scaling"]:
-            text_dpi = "Auto"
+            text_dpi = tr("Auto")
         else:
-            text_dpi = "Off"
+            text_dpi = tr("Off")
         if self._last_dpi_scaling != cfg.application["enable_high_dpi_scaling"]:
             text_need_restart = "*"
         else:
             text_need_restart = ""
-        self.button_dpiscale.setText(f"Scale: {text_dpi}{text_need_restart}")
+        self.button_dpiscale.setText(tr("Scale: {0}{1}").format(text_dpi, text_need_restart))
 
     def toggle_dpi_scaling(self):
         """Toggle DPI scaling"""
         if cfg.application["enable_high_dpi_scaling"]:
-            state = "Disable"
-            desc = "not be scaled under high DPI screen resolution."
+            state = tr("Disable")
+            desc = tr("not be scaled under high DPI screen resolution.")
         else:
-            state = "Enable"
-            desc = "be auto-scaled according to system DPI scaling setting."
+            state = tr("Enable")
+            desc = tr("be auto-scaled according to system DPI scaling setting.")
         msg_text = (
-            f"{state} <b>High DPI Scaling</b> and restart <b>TinyPedal</b>?<br><br>"
-            f"<b>Window</b> and <b>Overlay</b> size and position will {desc}"
+            tr("{0} <b>High DPI Scaling</b> and restart <b>TinyPedal</b>?<br><br><b>Window</b> and <b>Overlay</b> size and position will {1}").format(state, desc)
         )
         restart_msg = QMessageBox.question(
-            self, "High DPI Scaling", msg_text,
+            self, tr("High DPI Scaling"), msg_text,
             buttons=QMessageBox.Yes | QMessageBox.No,
             defaultButton=QMessageBox.No,
         )
@@ -211,7 +211,7 @@ class AppWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle(f"{APP.TINYPEDAL} v{APP.VERSION}")
+        self.setWindowTitle(tr("{0} v{1}").format(APP.TINYPEDAL, APP.VERSION))
         self.setAttribute(Qt.WA_DeleteOnClose, True)
         self.last_style = None
         self.closing = False
@@ -251,23 +251,23 @@ class AppWindow(QMainWindow):
         logger.info("GUI: loading window menu")
         menu = self.menuBar()
         # Overlay menu
-        menu_overlay = OverlayMenu("Overlay", self)
+        menu_overlay = OverlayMenu(tr("Overlay"), self)
         menu.addMenu(menu_overlay)
         # API menu
-        menu_api = APIMenu("API", self)
+        menu_api = APIMenu(tr("API"), self)
         menu.addMenu(menu_api)
         self.statusBar().button_api.setMenu(menu_api)
         # Config menu
-        menu_config = ConfigMenu("Config", self)
+        menu_config = ConfigMenu(tr("Config"), self)
         menu.addMenu(menu_config)
         # Tools menu
-        menu_tools = ToolsMenu("Tools", self)
+        menu_tools = ToolsMenu(tr("Tools"), self)
         menu.addMenu(menu_tools)
         # Window menu
-        menu_window = WindowMenu("Window", self)
+        menu_window = WindowMenu(tr("Window"), self)
         menu.addMenu(menu_window)
         # Help menu
-        menu_help = HelpMenu("Help", self)
+        menu_help = HelpMenu(tr("Help"), self)
         menu.addMenu(menu_help)
 
     def set_tray_icon(self):
@@ -279,7 +279,7 @@ class AppWindow(QMainWindow):
         tray_icon.setToolTip(self.windowTitle())
         tray_icon.activated.connect(self.tray_doubleclick)
         # Add tray menu
-        tray_menu = OverlayMenu("Overlay", self, True)
+        tray_menu = OverlayMenu(tr("Overlay"), self, True)
         tray_icon.setContextMenu(tray_menu)
         tray_icon.show()
 

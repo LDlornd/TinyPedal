@@ -24,13 +24,26 @@ import logging
 import os
 import sys
 
-from PySide2.QtCore import QCoreApplication, QLocale, Qt
+from PySide2.QtCore import QCoreApplication, QLocale, Qt, QTranslator
 from PySide2.QtGui import QFont, QGuiApplication, QIcon, QPixmapCache
 from PySide2.QtWidgets import QApplication, QMessageBox
 
 from ..constant import APP, FILE, PLATFORM
+from ..i18n import tr
 
 logger = logging.getLogger(__name__)
+
+
+class StandardButtonsTranslator(QTranslator):
+    """翻译 Qt 标准按钮，保持数字输入使用 C locale。"""
+
+    def isEmpty(self):
+        return False
+
+    def translate(self, context, sourceText, disambiguation=None, n=-1):
+        if context not in ("QDialogButtonBox", "QPlatformTheme", "QMessageBox"):
+            return sourceText
+        return tr(sourceText)
 
 
 def set_app_dpi_scale(high_dpi: bool):
@@ -79,6 +92,8 @@ def init(high_dpi: bool) -> QApplication:
     # Set GUI
     QApplication.setStyle("Fusion")
     root = QApplication(sys.argv)
+    root.standard_buttons_translator = StandardButtonsTranslator(root)
+    root.installTranslator(root.standard_buttons_translator)
     root.setQuitOnLastWindowClosed(False)
     root.setApplicationName(APP.TINYPEDAL)
     set_app_icon(root)
