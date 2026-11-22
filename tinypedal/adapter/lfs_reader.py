@@ -18,7 +18,7 @@
 
 """LFS 本车遥测读取；未提供的通道沿用显示层约定的不可用值。
 
-赛事圈时、排名、刹车温度及轮胎压力不由 OutSim/OutGauge 提供，
+赛事圈时由 InSim 确认；排名、刹车温度及轮胎压力尚未提供，
 不要将显示兼容值用于数据分析；导出直接使用带缺失状态的原始快照。
 """
 
@@ -33,6 +33,11 @@ from .lfs_udp import Dashboard, Physics, Telemetry
 
 EMPTY_PHYSICS = Physics()
 EMPTY_DASHBOARD = Dashboard()
+
+
+def map_heading(heading: float) -> float:
+    """将 LFS 从 +Y 逆时针计量的朝向换成 TinyPedal 导航角。"""
+    return heading + math.pi / 2
 
 
 class DataAdapter:
@@ -68,11 +73,13 @@ class DataAdapter:
         return tuple(getattr(wheel, field) * scale for wheel in wheels) if wheels else DATA.WHEELS_ZERO
 
 
+
 class State(_reader.State, DataAdapter):
     __slots__ = ()
 
     def active(self) -> bool:
-        return bool(self.source.config["track_name"]) and self.source.snapshot().physics is not None
+        snapshot = self.source.snapshot()
+        return bool(snapshot.track_name) and snapshot.physics is not None
 
     def paused(self) -> bool:
         return not self.active()
@@ -84,21 +91,28 @@ class State(_reader.State, DataAdapter):
         if self.source.error:
             return "LFS UDP: " + self.source.error
         snapshot = self.source.snapshot()
+        if not snapshot.track_name:
+            if self.source.config["enable_auto_track_name"]:
+                port = self.source.config["insim_port"]
+                return f"LFS InSim: {snapshot.track_error} (/insim {port})"
+            return "LFS UDP: set track_name in API Options"
         if snapshot.physics is None:
             return "LFS UDP: waiting"
-        if not self.source.config["track_name"]:
-            return "LFS UDP: set track_name in API Options"
-        return "OutSim 1ff" if snapshot.physics.inputs is not None else "OutSim legacy"
+        protocol = "OutSim 1ff" if snapshot.physics.inputs is not None else "OutSim legacy"
+        timing = "timing ready" if snapshot.timing_ready else "timing: cross start/finish"
+        if not snapshot.race.player_id:
+            timing = "timing: waiting for local InSim player"
+        return protocol + " | " + snapshot.track_name + " | " + timing
 
     def capture(self) -> _reader.TelemetryFrame | None:
         """导出使用同一物理快照；缺失通道保留 None，不使用显示兼容值。"""
         snapshot = self.source.snapshot()
         sim, gauge = snapshot.physics, snapshot.dashboard
-        if sim is None or not self.source.config["track_name"]:
+        if sim is None or not snapshot.track_name:
             return None
         pedals = sim.inputs
         capacity = self.source.config["fuel_capacity"]
-        length = self.source.config["track_length"]
+        length = snapshot.track_length
         values = {
             "outsim_time_ms": sim.time_ms,
             "outgauge_time_ms": gauge.time_ms if gauge else None,
@@ -117,10 +131,11 @@ class State(_reader.State, DataAdapter):
             "steering_torque_nm": sim.steering_torque_nm,
             "max_torque_at_rpm_nm": sim.max_torque_nm,
             "lap_distance_m": sim.lap_distance_m,
-            "lap_progress": sim.lap_distance_m / length if sim.lap_distance_m is not None and length > 0 else None,
+            "lap_progress": max(0.0, min(1.0, sim.indexed_distance_m / length))
+            if sim.indexed_distance_m is not None and length > 0 else None,
             "indexed_distance_m": sim.indexed_distance_m,
-            "yaw_rad": sim.heading,
-            "map_x_m": -sim.position[0],
+            "yaw_rad": map_heading(sim.heading),
+            "map_x_m": sim.position[0],
             "map_y_m": sim.position[1],
             "height_m": sim.position[2],
             "accel_lateral_m_s2": sim.acceleration[0],
@@ -287,13 +302,19 @@ class Lap(_reader.Lap, DataAdapter):
     __slots__ = ()
 
     def completed(self, index: int | None = None) -> int:
-        return 0
+        return self.source.snapshot().timed_laps
 
     def track_length(self) -> float:
-        return self.source.config["track_length"]
+        return self.source.snapshot().track_length
 
     def distance(self, index: int | None = None) -> float:
-        return self.sim.lap_distance_m if self.sim.lap_distance_m is not None else 0.0
+        snapshot = self.source.snapshot()
+        # 未定位圈起点时不让录制模块从半圈开始建立参考数据。
+        if snapshot.physics is None or not snapshot.timing_ready:
+            return -1.0
+        # IndexedDistance 是固定赛道尺，CurrentLapDist 会随每圈行驶线路变化。
+        distance = snapshot.physics.indexed_distance_m
+        return distance if distance is not None else -1.0
 
     def progress(self, index: int | None = None) -> float:
         return max(0.0, min(1.0, self.distance(index) / self.track_length())) if self.track_length() > 0 else 0.0
@@ -305,7 +326,7 @@ class Lap(_reader.Lap, DataAdapter):
         return 0.0
 
     def sector_index(self, index: int | None = None) -> int:
-        return 0
+        return self.source.snapshot().race.sector_index
 
     def safety_car_distance(self) -> float:
         return 0.0
@@ -321,7 +342,7 @@ class Session(_reader.Session, DataAdapter):
         return strip_invalid_char(self.track_name() + " - " + (self.gauge.car or "LFS"))
 
     def track_name(self) -> str:
-        return strip_invalid_char(self.source.config["track_name"])
+        return strip_invalid_char(self.source.snapshot().track_name)
 
     def identifier(self) -> tuple[int, int, int]:
         return self.source.snapshot().generation, int(self.elapsed()), 0
@@ -461,19 +482,21 @@ class Timing(_reader.Timing, DataAdapter):
         return self.sim.time_ms / 1000
 
     def is_last_valid(self, index: int | None = None) -> bool:
-        return False
+        return self.last_laptime(index) > 0
 
     def current_laptime(self, index: int | None = None) -> float:
-        return 0.0
+        return self.source.snapshot().current_laptime
 
     def last_laptime(self, index: int | None = None) -> float:
-        return 0.0
+        return self.source.snapshot().last_laptime
 
     def best_laptime(self, index: int | None = None) -> float:
-        return 0.0
+        return self.source.snapshot().race.best_laptime
 
     def reference_laptime(self, index: int | None = None, laptime: float = 0) -> float:
-        return laptime if 0 < laptime < DATA.MAX_SECONDS else DATA.MAX_SECONDS
+        if 0 < laptime < DATA.MAX_SECONDS:
+            return laptime
+        return self.best_laptime(index) or DATA.MAX_SECONDS
 
     def estimated_laptime(self, index: int | None = None) -> float:
         return DATA.MAX_SECONDS
@@ -482,7 +505,7 @@ class Timing(_reader.Timing, DataAdapter):
         return 0.0
 
     def last_sector(self, index: int | None = None) -> float:
-        return 0.0
+        return self.source.snapshot().race.last_sector
 
 
 class Tyre(_reader.Tyre, DataAdapter):
@@ -571,13 +594,13 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return 0
 
     def in_pits(self, index: int | None = None) -> bool:
-        return False
+        return self.source.snapshot().race.in_pits
 
     def in_garage(self, index: int | None = None) -> bool:
         return False
 
     def in_paddock(self, index: int | None = None) -> int:
-        return 0
+        return int(self.in_pits(index))
 
     def number_pitstops(self, index: int | None = None) -> int:
         return 0
@@ -601,7 +624,7 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return 0
 
     def orientation_yaw(self, index: int | None = None) -> float:
-        return self.sim.heading
+        return map_heading(self.sim.heading)
 
     def position_xyz(self, index: int | None = None) -> tuple[float, float, float]:
         return self.sim.position
@@ -610,7 +633,8 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return self.sim.position[1]
 
     def position_lateral(self, index: int | None = None) -> float:
-        return -self.sim.position[0]
+        # 绘图直接使用 (Y, X) 作为屏幕 (x, y)，屏幕 y 向下，不再额外取反。
+        return self.sim.position[0]
 
     def position_vertical(self, index: int | None = None) -> float:
         return self.sim.position[2]

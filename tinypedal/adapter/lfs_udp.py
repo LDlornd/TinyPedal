@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""只读 LFS UDP 遥测：解码数据包并发布不可变快照。"""
+"""只读 LFS 遥测：解码 UDP 数据包，并合并 InSim 赛道状态。"""
 
 from __future__ import annotations
 
@@ -28,6 +28,8 @@ import struct
 import threading
 import time
 from dataclasses import dataclass
+
+from .lfs_insim import RaceState, TrackReader
 
 logger = logging.getLogger(__name__)
 
@@ -109,6 +111,14 @@ class Snapshot:
     dashboard: Dashboard | None
     generation: int
     received: float
+    track_name: str
+    track_error: str
+    race: RaceState
+    current_laptime: float
+    last_laptime: float
+    timed_laps: int
+    timing_ready: bool
+    track_length: float
 
 
 def _finite(values):
@@ -177,7 +187,7 @@ def parse_dashboard(data: bytes) -> Dashboard:
 
 
 class Telemetry:
-    """连接器拥有的两个 UDP socket；只在接收线程修改快照。"""
+    """管理两个 UDP socket 和 InSim 读取器，持锁发布不可变快照。"""
 
     def __init__(self):
         self.config = {}
@@ -192,6 +202,16 @@ class Telemetry:
         self._sim_received = 0.0
         self._gauge_received = 0.0
         self._generation = 0
+        self._track_name = ""
+        self._track_error = "waiting for InSim"
+        self._race = RaceState()
+        self._lap_start_ms = None
+        self._timed_laps = 0
+        self._last_laptime = 0.0
+        self._crossed_received = -float("inf")
+        self._official_received = -float("inf")
+        self._track_length = 0.0
+        self._insim = TrackReader(self._set_track, self._set_race)
 
     def setup(self, config: dict):
         """应用现有预设中的端口及人工补充信息，不修改游戏配置。"""
@@ -201,6 +221,10 @@ class Telemetry:
             raise ValueError("LFS UDP ports must be different integers in 1..65535")
         if not math.isfinite(config["connection_timeout"]) or config["connection_timeout"] <= 0:
             raise ValueError("LFS connection timeout must be positive")
+        if config["enable_auto_track_name"]:
+            port = config["insim_port"]
+            if not isinstance(port, int) or not 1 <= port <= 65535:
+                raise ValueError("LFS InSim port must be an integer in 1..65535")
         for key in ("track_length", "steering_range", "engine_rpm_max", "fuel_capacity"):
             if not math.isfinite(config[key]) or config[key] < 0:
                 raise ValueError("Invalid LFS setting: " + key)
@@ -225,9 +249,12 @@ class Telemetry:
             return
         self._thread = threading.Thread(target=self._receive, name="LFS UDP", daemon=True)
         self._thread.start()
+        if self.config["enable_auto_track_name"]:
+            self._insim.start(self.config["insim_port"])
 
     def stop(self):
         self._stop.set()
+        self._insim.stop()
         if self._thread is not None:
             self._thread.join()
             self._thread = None
@@ -238,6 +265,71 @@ class Telemetry:
             self._physics = self._dashboard = None
             self._sim_received = self._gauge_received = 0.0
             self._generation += 1
+            self._track_name = ""
+            self._track_error = "waiting for InSim"
+            self._race = RaceState()
+            self._reset_timing()
+            self._track_length = 0.0
+
+    def _reset_timing(self):
+        """调用方须持锁；中断后等待再次过线，不拼接不完整圈。"""
+        self._lap_start_ms = None
+        self._timed_laps = 0
+        self._last_laptime = 0.0
+        self._crossed_received = self._official_received = -float("inf")
+
+    def _set_race(self, race: RaceState):
+        with self._lock:
+            if race.generation != self._race.generation:
+                self._reset_timing()
+                self._physics = self._dashboard = None
+                self._sim_received = self._gauge_received = 0.0
+                self._generation += 1
+            if race.lap_serial != self._race.lap_serial:
+                self._official_received = time.monotonic()
+                if abs(self._official_received - self._crossed_received) < 1.0:
+                    self._last_laptime = race.last_laptime
+            self._race = race
+
+
+    def _update_timing(self, packet: Physics, now: float):
+        """OutSim 过线定位当前圈时，InSim 完圈报文确认上一圈成绩。"""
+        previous = self._physics
+        if previous is None or packet.indexed_distance_m is None or previous.indexed_distance_m is None:
+            return
+        delta_ms = (packet.time_ms - previous.time_ms) % 2**32
+        distance = packet.indexed_distance_m
+        delta_distance = distance - previous.indexed_distance_m
+        speed = math.sqrt(sum(value * value for value in packet.velocity))
+        movement = math.dist(packet.position, previous.position)
+        continuous = delta_ms < 1000 and movement <= max(20.0, speed * delta_ms / 500)
+        crossing = previous.indexed_distance_m > 200 and 0 <= distance < 200 and delta_distance < -200
+        if crossing and continuous and self._race.player_id:
+            # 以当前速度补偿过线至收到样本的时间；精度受 OutSim 采样间隔影响。
+            offset_ms = min(delta_ms, distance / speed * 1000) if speed > 1 else 0.0
+            self._lap_start_ms = (packet.time_ms - offset_ms) % 2**32
+            self._timed_laps += 1
+            self._last_laptime = 0.0
+            self._crossed_received = now
+            if abs(now - self._official_received) < 1.0:
+                self._last_laptime = self._race.last_laptime
+            self._track_length = previous.indexed_distance_m + max(0.0, speed * delta_ms / 1000 - distance)
+        elif not continuous or abs(delta_distance) > 100:
+            self._reset_timing()
+            self._generation += 1
+
+    def _set_track(self, track_name: str, error: str):
+        """换图或断开时丢弃旧快照，读取方统一使用新的赛道身份。"""
+        with self._lock:
+            if track_name != self._track_name:
+                self._track_name = track_name
+                self._physics = self._dashboard = None
+                self._sim_received = self._gauge_received = 0.0
+                self._generation += 1
+                self._reset_timing()
+                self._track_length = 0.0
+                logger.info("LFS track: %s", track_name or "unavailable")
+            self._track_error = error
 
     def snapshot(self) -> Snapshot:
         """过期数据返回 None；仪表与物理时间相差超过 250ms 时不合并。"""
@@ -250,7 +342,16 @@ class Telemetry:
                 skew = (physics.time_ms - dashboard.time_ms + 2**31) % 2**32 - 2**31
                 if abs(skew) > 250:
                     dashboard = None
-            return Snapshot(physics, dashboard, self._generation, self._sim_received)
+            automatic = self.config.get("enable_auto_track_name", True)
+            track_name = self._track_name if automatic else self.config.get("track_name", "").strip()
+            track_error = self._track_error if automatic else ""
+            timing_ready = physics is not None and self._lap_start_ms is not None
+            current_laptime = ((physics.time_ms - self._lap_start_ms) % 2**32) / 1000 if timing_ready else 0.0
+            track_length = self.config.get("track_length", 0.0) or self._track_length
+            return Snapshot(physics, dashboard, self._generation, self._sim_received,
+                            track_name, track_error, self._race, current_laptime,
+                            self._last_laptime if timing_ready else 0.0,
+                            self._timed_laps, timing_ready, track_length)
 
     def _receive(self):
         try:
@@ -280,11 +381,17 @@ class Telemetry:
                         if sim:
                             if not fresh:
                                 self._generation += 1
+                                self._reset_timing()
+                            else:
+                                self._update_timing(packet, now)
                             self._physics, self._sim_received = packet, now
                         else:
-                            if previous is not None and packet.player_id != previous.player_id:
+                            if (previous is None or packet.player_id != previous.player_id
+                                    or packet.car != previous.car):
+                                # 首次确认车型或换车后，让参考圈重新使用正确的组合名称。
                                 self._generation += 1
                                 self._physics = None
+                                self._reset_timing()
                             self._dashboard, self._gauge_received = packet, now
         except OSError as error:
             self.error = str(error)

@@ -110,7 +110,7 @@ CFG_STRING = (
 
 # Integer
 CFG_INTEGER = (
-    "^outsim_port$|^outgauge_port$|"
+    "^outsim_port$|^outgauge_port$|^insim_port$|"
     # Exact match
     "^access_mode$|"
     "^display_orientation$|"

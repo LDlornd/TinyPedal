@@ -88,7 +88,9 @@ class MapCoords:
             len(self.coords) >= 10
             and len(self.dists) >= 10
             and len(self.sectors) == 2
-            and self.sectors[0] < self.sectors[1]
+            # Zero denotes an absent split; some tracks have fewer than two.
+            and all(0 <= index < len(self.coords) - 1 for index in self.sectors)
+            and (self.sectors[0] <= self.sectors[1] or self.sectors[1] == 0)
         )
 
     def clear(self):

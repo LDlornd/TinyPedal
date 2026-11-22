@@ -32,6 +32,8 @@ API_DEFAULT = {
         "outsim_port": 30000,
         "outgauge_port": 30001,
         "connection_timeout": 1.0,
+        "enable_auto_track_name": True,
+        "insim_port": 29999,
         "track_name": "",
         "driver_name": "",
         "track_length": 0.0,
