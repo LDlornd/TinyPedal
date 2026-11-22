@@ -2,11 +2,12 @@
 #  Copyright (C) 2022-2026 TinyPedal developers, see contributors.md file
 #  SPDX-License-Identifier: GPL-3.0-or-later
 
-"""通过本机 InSim TCP 读取赛道及本地驾驶者圈时。"""
+"""通过本机 InSim TCP 读取赛道、多车位置及本地驾驶者圈时。"""
 
 from __future__ import annotations
 
 import logging
+import math
 import re
 import select
 import socket
@@ -30,8 +31,24 @@ IO_TIMEOUT = 3.0
 POLL_INTERVAL = 0.2
 STATE_INTERVAL = 1.0
 STATE_TIMEOUT = 5.0
+# InSim 的 Interval 是整数毫秒，按 10ms 的步长请求；20ms 对应每秒 50 次。
+MCI_INTERVAL_MS = 20
+COMP_CAR = struct.Struct("<HH4BiiiHHHh")
 
 
+@dataclass(frozen=True)
+class CarState:
+    """InSim 车辆位置，长度为米、朝向为弧度、速度为米每秒。"""
+
+    player_id: int = 0
+    driver_name: str = ""
+    car: str = ""
+    in_pits: bool = False
+    in_garage: bool = False
+    position: tuple[float, float, float] = (0.0, 0.0, 0.0)
+    heading: float = 0.0
+    speed: float = 0.0
+    received: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -65,9 +82,13 @@ class TrackReader:
     """拥有 TCP 连接和线程，将赛道或连接失败交给调用方发布。"""
 
     def __init__(self, publish: Callable[[str, str], None],
-                 publish_race: Callable[[RaceState], None]):
+                 publish_race: Callable[[RaceState], None],
+                 publish_cars: Callable[[tuple[CarState, ...]], None]):
         self._publish = publish
         self._publish_race = publish_race
+        self._publish_cars = publish_cars
+        self._cars: dict[int, CarState] = {}
+        self._pending_cars: dict[int, CarState] | None = None
         self._race = RaceState()
         self._stop = threading.Event()
         self._thread = None
@@ -96,12 +117,13 @@ class TrackReader:
                     connection.connect(("127.0.0.1", port))
                     phase = "initialize"
                     connection.sendall(INITIALIZE.pack(
-                        INITIALIZE.size // 4, 1, 1, 0, 0, 4,
-                        INSIM_VERSION, 0, 0, b"", b"TinyPedal"))
+                        INITIALIZE.size // 4, 1, 1, 0, 0, 4 | 32,
+                        INSIM_VERSION, 0, MCI_INTERVAL_MS, b"", b"TinyPedal"))
                     phase = "read state"
                     self._read_connection(connection)
             except (OSError, ValueError, struct.error) as error:
                 message = f"{phase}: {error}"
+                self._reset_cars()
                 self._publish("", message)
                 if not self._stop.is_set() and message != last_error:
                     logger.warning("LFS InSim: %s", message)
@@ -115,6 +137,7 @@ class TrackReader:
         next_request = 0.0
         last_track = None
         self._publish("", "waiting for track")
+        self._reset_cars()
         self._reset_race()
         connection.sendall(REQUEST_PLAYERS)
         while not self._stop.is_set():
@@ -157,6 +180,7 @@ class TrackReader:
                     last_state = time.monotonic()
                     if track != last_track:
                         last_track = track
+                        self._reset_cars()
                         self._reset_race()
                         connection.sendall(REQUEST_PLAYERS)
                     self._publish(track, "" if track else "waiting for track")
@@ -168,7 +192,81 @@ class TrackReader:
                                player_id=player_id, in_pits=in_pits)
         self._publish_race(self._race)
 
+    def _reset_cars(self):
+        self._cars.clear()
+        self._pending_cars = None
+        self._publish_cars(())
 
+    def _read_cars(self, packet: bytes):
+        """按 PLID 合并车辆信息；多包 MCI 收齐后一次发布，避免丢掉第 17 辆车。"""
+        kind = packet[1]
+        player_id = packet[3]
+        if kind == 3 and packet[3] in (11, 12):
+            self._reset_cars()
+            return
+        if kind == 17 and packet[2] == 0:
+            self._pending_cars = None
+            self._cars = {key: replace(car, received=0.0) for key, car in self._cars.items()}
+            self._publish_cars(())
+            return
+        if kind == 21:  # IS_NPL
+            raw_car = packet[40:44]
+            car = raw_car.rstrip(b"\0").decode("ascii", errors="replace")
+            if re.fullmatch(r"[A-Z0-9]{3}", car) is None:
+                car = format(int.from_bytes(raw_car, "little"), "06x") if any(raw_car) else ""
+            # LFS 名称允许代码页和颜色标记；这里只去掉颜色，无法解码的字节保留替代符。
+            name = packet[8:32].split(b"\0", 1)[0].decode("cp1252", errors="replace")
+            name = re.sub(r"\^[0-9]", "", name)
+            self._cars[player_id] = CarState(
+                player_id=player_id, driver_name=name, car=car,
+                in_pits=bool(struct.unpack_from("<H", packet, 6)[0] & 256))
+            if self._pending_cars is not None:
+                self._pending_cars.pop(player_id, None)
+        elif kind in (22, 23, 41):  # pits, spectate, reset: wait for a new position
+            if kind == 23:
+                self._cars.pop(player_id, None)
+            elif player_id in self._cars:
+                car = self._cars[player_id]
+                self._cars[player_id] = replace(
+                    car, received=0.0, in_garage=kind == 22 or car.in_garage)
+            if self._pending_cars is not None:
+                self._pending_cars.pop(player_id, None)
+        elif kind == 28 and player_id in self._cars:
+            self._cars[player_id] = replace(self._cars[player_id], in_pits=packet[4] != 0)
+        elif kind == 33 and player_id in self._cars:
+            flags = struct.unpack_from("<H", packet, 4)[0]
+            self._cars[player_id] = replace(self._cars[player_id], in_pits=bool(flags & 256))
+        elif kind == 38:  # IS_MCI
+            count = packet[3]
+            if count > 16 or len(packet) != 4 + count * COMP_CAR.size:
+                raise ValueError("Invalid InSim MCI packet size")
+            if not count:
+                self._pending_cars = None
+                self._cars = {key: replace(car, received=0.0) for key, car in self._cars.items()}
+                self._publish_cars(())
+                return
+            now = time.monotonic()
+            for fields in COMP_CAR.iter_unpack(packet[4:]):
+                _, _, player_id, _, info, _, x, y, z, speed, _, heading, _ = fields
+                if info & 64:  # CCI_FIRST: start a complete set, possibly spanning packets
+                    self._pending_cars = {}
+                if self._pending_cars is None:
+                    continue
+                car = self._cars.get(player_id, CarState(player_id=player_id))
+                if not info & 32 and not car.in_garage:
+                    self._pending_cars[player_id] = replace(
+                        car, position=(x / 65536, y / 65536, z / 65536),
+                        speed=speed * 100 / 32768, heading=heading * math.tau / 65536,
+                        received=now)
+                if info & 128:  # CCI_LAST
+                    self._cars = {key: replace(car, received=0.0) for key, car in self._cars.items()}
+                    self._cars.update(self._pending_cars)
+                    self._publish_cars(tuple(self._pending_cars.values()))
+                    self._pending_cars = None
+            return
+        else:
+            return
+        self._publish_cars(tuple(car for car in self._cars.values() if car.received))
 
     def _read_race(self, packet: bytes):
         """只处理本地人类车辆，避免 AI 或远端车辆的成绩混入本车。"""
@@ -176,6 +274,7 @@ class TrackReader:
         sizes = {17: 28, 21: 76, 22: 4, 23: 4, 24: 20, 25: 16, 28: 8, 33: 8, 41: 4}
         if kind in sizes and len(packet) != sizes[kind]:
             raise ValueError(f"Invalid InSim race packet {kind}: {len(packet)} bytes")
+        self._read_cars(packet)
         if kind == 3 and packet[3] in (11, 12):  # TINY_REN / TINY_CLR
             self._reset_race()
         elif kind == 17 and packet[2] == 0:  # IS_RST, unsolicited race restart

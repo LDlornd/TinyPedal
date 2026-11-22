@@ -29,7 +29,7 @@ import threading
 import time
 from dataclasses import dataclass
 
-from .lfs_insim import RaceState, TrackReader
+from .lfs_insim import CarState, RaceState, TrackReader
 
 logger = logging.getLogger(__name__)
 
@@ -119,6 +119,7 @@ class Snapshot:
     timed_laps: int
     timing_ready: bool
     track_length: float
+    opponents: tuple[CarState, ...]
 
 
 def _finite(values):
@@ -205,13 +206,14 @@ class Telemetry:
         self._track_name = ""
         self._track_error = "waiting for InSim"
         self._race = RaceState()
+        self._cars: tuple[CarState, ...] = ()
         self._lap_start_ms = None
         self._timed_laps = 0
         self._last_laptime = 0.0
         self._crossed_received = -float("inf")
         self._official_received = -float("inf")
         self._track_length = 0.0
-        self._insim = TrackReader(self._set_track, self._set_race)
+        self._insim = TrackReader(self._set_track, self._set_race, self._set_cars)
 
     def setup(self, config: dict):
         """应用现有预设中的端口及人工补充信息，不修改游戏配置。"""
@@ -268,6 +270,7 @@ class Telemetry:
             self._track_name = ""
             self._track_error = "waiting for InSim"
             self._race = RaceState()
+            self._cars = ()
             self._reset_timing()
             self._track_length = 0.0
 
@@ -291,6 +294,9 @@ class Telemetry:
                     self._last_laptime = race.last_laptime
             self._race = race
 
+    def _set_cars(self, cars: tuple[CarState, ...]):
+        with self._lock:
+            self._cars = tuple(sorted(cars, key=lambda car: car.player_id))
 
     def _update_timing(self, packet: Physics, now: float):
         """OutSim 过线定位当前圈时，InSim 完圈报文确认上一圈成绩。"""
@@ -328,6 +334,7 @@ class Telemetry:
                 self._generation += 1
                 self._reset_timing()
                 self._track_length = 0.0
+                self._cars = ()
                 logger.info("LFS track: %s", track_name or "unavailable")
             self._track_error = error
 
@@ -348,10 +355,15 @@ class Telemetry:
             timing_ready = physics is not None and self._lap_start_ms is not None
             current_laptime = ((physics.time_ms - self._lap_start_ms) % 2**32) / 1000 if timing_ready else 0.0
             track_length = self.config.get("track_length", 0.0) or self._track_length
+            # 本车固定占索引 0；InSim 的本车位置只用于身份匹配，不重复加入车辆列表。
+            local_id = self._race.player_id
+            opponents = tuple(car for car in self._cars
+                              if local_id and car.player_id != local_id
+                              and 0 <= now - car.received < timeout) if physics else ()
             return Snapshot(physics, dashboard, self._generation, self._sim_received,
                             track_name, track_error, self._race, current_laptime,
                             self._last_laptime if timing_ready else 0.0,
-                            self._timed_laps, timing_ready, track_length)
+                            self._timed_laps, timing_ready, track_length, opponents)
 
     def _receive(self):
         try:

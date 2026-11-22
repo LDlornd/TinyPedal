@@ -16,7 +16,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-"""LFS 本车遥测读取；未提供的通道沿用显示层约定的不可用值。
+"""LFS 本车遥测与 InSim 多车位置；未提供的通道沿用显示层约定的不可用值。
 
 赛事圈时由 InSim 确认；排名、刹车温度及轮胎压力尚未提供，
 不要将显示兼容值用于数据分析；导出直接使用带缺失状态的原始快照。
@@ -29,10 +29,12 @@ import math
 from ..constant import DATA
 from ..formatter import strip_invalid_char
 from . import _reader
+from .lfs_insim import CarState
 from .lfs_udp import Dashboard, Physics, Telemetry
 
 EMPTY_PHYSICS = Physics()
 EMPTY_DASHBOARD = Dashboard()
+EMPTY_CAR = CarState()
 
 
 def map_heading(heading: float) -> float:
@@ -72,6 +74,9 @@ class DataAdapter:
         wheels = self.sim.wheels
         return tuple(getattr(wheel, field) * scale for wheel in wheels) if wheels else DATA.WHEELS_ZERO
 
+    def opponent(self, index: int) -> CarState:
+        cars = self.source.snapshot().opponents
+        return cars[index - 1] if 1 <= index <= len(cars) else EMPTY_CAR
 
 
 class State(_reader.State, DataAdapter):
@@ -102,7 +107,8 @@ class State(_reader.State, DataAdapter):
         timing = "timing ready" if snapshot.timing_ready else "timing: cross start/finish"
         if not snapshot.race.player_id:
             timing = "timing: waiting for local InSim player"
-        return protocol + " | " + snapshot.track_name + " | " + timing
+        traffic = f"traffic: {len(snapshot.opponents)}"
+        return protocol + " | " + snapshot.track_name + " | " + timing + " | " + traffic
 
     def capture(self) -> _reader.TelemetryFrame | None:
         """导出使用同一物理快照；缺失通道保留 None，不使用显示兼容值。"""
@@ -249,9 +255,13 @@ class Engine(_reader.Engine, DataAdapter):
         return 0.0
 
     def fuel(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            return 0.0
         return self.gauge.fuel_fraction * self.source.config["fuel_capacity"]
 
     def fuel_fraction(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            return 0.0
         return self.gauge.fuel_fraction
 
     def tank_capacity(self, index: int | None = None) -> float:
@@ -271,24 +281,26 @@ class Inputs(_reader.Inputs, DataAdapter):
     __slots__ = ()
 
     def throttle(self, index: int | None = None) -> float:
-        return self.pedals()[0]
+        return self.pedals()[0] if index in (None, 0) else 0.0
 
     def throttle_raw(self, index: int | None = None) -> float:
-        return self.pedals()[0]
+        return self.throttle(index)
 
     def brake(self, index: int | None = None) -> float:
-        return self.pedals()[1]
+        return self.pedals()[1] if index in (None, 0) else 0.0
 
     def brake_raw(self, index: int | None = None) -> float:
-        return self.pedals()[1]
+        return self.brake(index)
 
     def clutch(self, index: int | None = None) -> float:
-        return self.pedals()[2]
+        return self.pedals()[2] if index in (None, 0) else 0.0
 
     def clutch_raw(self, index: int | None = None) -> float:
-        return self.pedals()[2]
+        return self.clutch(index)
 
     def steering(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            return 0.0
         return self.sim.inputs[2] if self.sim.inputs is not None else 0.0
 
     def steering_range(self, index: int | None = None) -> float:
@@ -302,12 +314,14 @@ class Lap(_reader.Lap, DataAdapter):
     __slots__ = ()
 
     def completed(self, index: int | None = None) -> int:
-        return self.source.snapshot().timed_laps
+        return self.source.snapshot().timed_laps if index in (None, 0) else 0
 
     def track_length(self) -> float:
         return self.source.snapshot().track_length
 
     def distance(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            return -1.0
         snapshot = self.source.snapshot()
         # 未定位圈起点时不让录制模块从半圈开始建立参考数据。
         if snapshot.physics is None or not snapshot.timing_ready:
@@ -326,7 +340,7 @@ class Lap(_reader.Lap, DataAdapter):
         return 0.0
 
     def sector_index(self, index: int | None = None) -> int:
-        return self.source.snapshot().race.sector_index
+        return self.source.snapshot().race.sector_index if index in (None, 0) else 0
 
     def safety_car_distance(self) -> float:
         return 0.0
@@ -479,19 +493,26 @@ class Timing(_reader.Timing, DataAdapter):
     __slots__ = ()
 
     def elapsed(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            snapshot = self.source.snapshot()
+            car = snapshot.opponents[index - 1] if 1 <= index <= len(snapshot.opponents) else EMPTY_CAR
+            # MCI 没有游戏时间戳，使用到达时间投影到 OutSim 时钟，供原有插值使用。
+            if snapshot.physics is not None and car.received:
+                return snapshot.physics.time_ms / 1000 + car.received - snapshot.received
+            return 0.0
         return self.sim.time_ms / 1000
 
     def is_last_valid(self, index: int | None = None) -> bool:
         return self.last_laptime(index) > 0
 
     def current_laptime(self, index: int | None = None) -> float:
-        return self.source.snapshot().current_laptime
+        return self.source.snapshot().current_laptime if index in (None, 0) else 0.0
 
     def last_laptime(self, index: int | None = None) -> float:
-        return self.source.snapshot().last_laptime
+        return self.source.snapshot().last_laptime if index in (None, 0) else 0.0
 
     def best_laptime(self, index: int | None = None) -> float:
-        return self.source.snapshot().race.best_laptime
+        return self.source.snapshot().race.best_laptime if index in (None, 0) else 0.0
 
     def reference_laptime(self, index: int | None = None, laptime: float = 0) -> float:
         if 0 < laptime < DATA.MAX_SECONDS:
@@ -505,7 +526,7 @@ class Timing(_reader.Timing, DataAdapter):
         return 0.0
 
     def last_sector(self, index: int | None = None) -> float:
-        return self.source.snapshot().race.last_sector
+        return self.source.snapshot().race.last_sector if index in (None, 0) else 0.0
 
 
 class Tyre(_reader.Tyre, DataAdapter):
@@ -567,25 +588,26 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return 0
 
     def slot_id(self, index: int | None = None) -> int:
-        return 0
+        return self.source.snapshot().race.player_id if index in (None, 0) else self.opponent(index).player_id
 
     def driver_name(self, index: int | None = None) -> str:
-        return self.source.config["driver_name"]
+        return self.source.config["driver_name"] if index in (None, 0) else self.opponent(index).driver_name
 
     def team_name(self, index: int | None = None) -> str:
         return ""
 
     def vehicle_model(self, index: int | None = None) -> str:
-        return self.gauge.car or "LFS"
+        return (self.gauge.car or "LFS") if index in (None, 0) else (self.opponent(index).car or "LFS")
 
     def class_name(self, index: int | None = None) -> str:
-        return self.gauge.car or "LFS"
+        return self.vehicle_model(index)
 
     def same_class(self, index: int | None = None) -> bool:
-        return index in (None, 0)
+        return self.class_name(index) == self.class_name()
 
     def total_vehicles(self) -> int:
-        return int(self.source.snapshot().physics is not None)
+        snapshot = self.source.snapshot()
+        return 1 + len(snapshot.opponents) if snapshot.physics is not None else 0
 
     def place(self, index: int | None = None) -> int:
         return 0
@@ -594,7 +616,7 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return 0
 
     def in_pits(self, index: int | None = None) -> bool:
-        return self.source.snapshot().race.in_pits
+        return self.source.snapshot().race.in_pits if index in (None, 0) else self.opponent(index).in_pits
 
     def in_garage(self, index: int | None = None) -> bool:
         return False
@@ -624,20 +646,20 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return 0
 
     def orientation_yaw(self, index: int | None = None) -> float:
-        return map_heading(self.sim.heading)
+        return map_heading(self.sim.heading if index in (None, 0) else self.opponent(index).heading)
 
     def position_xyz(self, index: int | None = None) -> tuple[float, float, float]:
-        return self.sim.position
+        return self.sim.position if index in (None, 0) else self.opponent(index).position
 
     def position_longitudinal(self, index: int | None = None) -> float:
-        return self.sim.position[1]
+        return self.position_xyz(index)[1]
 
     def position_lateral(self, index: int | None = None) -> float:
         # 绘图直接使用 (Y, X) 作为屏幕 (x, y)，屏幕 y 向下，不再额外取反。
-        return self.sim.position[0]
+        return self.position_xyz(index)[0]
 
     def position_vertical(self, index: int | None = None) -> float:
-        return self.sim.position[2]
+        return self.position_xyz(index)[2]
 
     def acceleration_lateral(self, index: int | None = None) -> float:
         return self.sim.acceleration[0]
@@ -658,6 +680,8 @@ class Vehicle(_reader.Vehicle, DataAdapter):
         return self.local_velocity()[2]
 
     def speed(self, index: int | None = None) -> float:
+        if index not in (None, 0):
+            return self.opponent(index).speed
         return math.sqrt(sum(value * value for value in self.sim.velocity))
 
     def downforce_front(self, index: int | None = None) -> float:
