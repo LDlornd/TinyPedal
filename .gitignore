@@ -4,6 +4,9 @@
 **/__pycache__/
 **/.mypy_cache/
 dist/
+.build-tools/
+dist-lfs-*/
+draft_*_folder/
 
 # User data folder
 brandlogo/

@@ -113,7 +113,7 @@ OutGauge ID 0
 
 前置条件：已按中文 README 准备依赖和子模块，并安装支持扩展 OutSim 的 LFS。
 
-在仓库根目录执行 `.\.venv310\Scripts\python.exe run.py`，复用已准备好的 `.venv310` 环境。按上面的步骤设置游戏与接口，在 API 选项中保持自动识别开启，清空手动 `track_name` 并应用。先在 LFS 执行 `/insim 29999`，进入 Blackwood GP 驾驶，预期状态栏出现 `OutSim 1ff | BL1` 并显示仪表。切换到另一条赛道或反向布局，预期代码随之更新，无需手动填写；正在进行的旧赛道记录应在新赛道恢复遥测后以 `context_changed` 结束。
+在仓库根目录执行 `powershell -ExecutionPolicy Bypass -File .\start.ps1`，复用已准备好的 `.venv310` 环境。按上面的步骤设置游戏与接口，在 API 选项中保持自动识别开启，清空手动 `track_name` 并应用。先在 LFS 执行 `/insim 29999`，进入 Blackwood GP 驾驶，预期状态栏出现 `OutSim 1ff | BL1` 并显示仪表。切换到另一条赛道或反向布局，预期代码随之更新，无需手动填写；正在进行的旧赛道记录应在新赛道恢复遥测后以 `context_changed` 结束。
 
 速度应与游戏仪表一致，踏板从 0 到 1 变化，左右转向方向正确；驶过路肩时对应车轮的悬架行程变化。请另行核对加速度符号和四轮顺序。
 
