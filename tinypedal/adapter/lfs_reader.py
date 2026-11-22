@@ -120,6 +120,9 @@ class State(_reader.State, DataAdapter):
         capacity = self.source.config["fuel_capacity"]
         length = snapshot.track_length
         values = {
+            "lap_completed": snapshot.race.completed if snapshot.race.last_laptime > 0 else None,
+            "lap_time_s": snapshot.current_laptime if snapshot.timing_ready else None,
+            "last_lap_time_s": snapshot.last_laptime or None,
             "outsim_time_ms": sim.time_ms,
             "outgauge_time_ms": gauge.time_ms if gauge else None,
             "speed_m_s": math.sqrt(sum(value * value for value in sim.velocity)),

@@ -29,9 +29,9 @@ WHEELS = ("fl", "fr", "rl", "rr")
 
 # 通道顺序同时用于 CSV 列和元数据，新增通道只需在此定义并接好采样。
 CHANNELS = {
-    "lap_completed": ("lap", "游戏报告的已完成圈数；LFS 未提供"),
-    "lap_time_s": ("s", "游戏当前圈用时；LFS 未提供"),
-    "last_lap_time_s": ("s", "游戏上一圈用时；LFS 未提供，负值表示无效圈"),
+    "lap_completed": ("lap", "游戏报告的已完成圈数；LFS 来自 InSim"),
+    "lap_time_s": ("s", "当前圈用时；LFS 通过 OutSim 过线定位估算"),
+    "last_lap_time_s": ("s", "游戏上一圈用时；LFS 来自匹配过线的 InSim，负值表示无效圈"),
     "lap_distance_m": ("m", "圈内距离"),
     "lap_progress": ("fraction", "圈内进度，0..1"),
     "speed_m_s": ("m/s", "速度大小"),

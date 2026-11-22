@@ -48,7 +48,7 @@ RECORD_FIELDS = {
     "source_time_s": ("s", "游戏提供的源时钟，不应直接跨重置求差"),
     "source_generation": ("index", "适配器重置计数"),
     "segment_index": ("index", "不连续记录段，从 0 开始"),
-    "lap_segment": ("index", "本轮观察到的圈段，从 0 开始；LFS 为距离回绕推断"),
+    "lap_segment": ("index", "本轮观察到的圈段，从 0 开始；LFS 优先使用 InSim 圈数，缺失时按距离回绕推断"),
     "break_before": ("bool", "此前存在暂停、重置或超过 250ms 的采样间隔"),
 }
 FIELDS = (*RECORD_FIELDS, *CHANNELS)
@@ -146,7 +146,7 @@ class DrivingRecorder:
             "session_type": read.session.session_type() if game != API.NAME_LFS else None,
             "session_identifier_at_start": list(read.session.identifier()) if game != API.NAME_LFS else None,
             "wheel_order": ["fl", "fr", "rl", "rr"],
-            "lap_source": "distance_wrap_inferred" if game == API.NAME_LFS else "game_lap_counter",
+            "lap_source": "insim_with_distance_fallback" if game == API.NAME_LFS else "game_lap_counter",
             "fields": {name: {"unit": unit, "description": description}
                        for name, (unit, description) in {**RECORD_FIELDS, **CHANNELS}.items()},
             "capture_consistency": "atomic_physics_snapshot" if read.capture else "sequential_adapter_reads",
@@ -157,6 +157,9 @@ class DrivingRecorder:
                 if game == API.NAME_LFS and api_config is not None and key in api_config
             },
         }
+        if game == API.NAME_LFS and api_config is not None:
+            automatic = api_config.get("enable_auto_track_name", True)
+            metadata["track_name_source"] = "insim" if automatic else "manual"
         if setup_data is not None:
             setup_name = "setup" + Path(setup_file).suffix.lower()
             (bundle / setup_name).write_bytes(setup_data)
@@ -258,7 +261,8 @@ class DrivingRecorder:
                     elif count:
                         if lap is not None and last_lap is not None and lap != last_lap:
                             lap_segment += 1
-                        elif game == API.NAME_LFS and not broken and distance is not None and last_distance is not None:
+                        elif (game == API.NAME_LFS and lap is None and last_lap is None
+                              and not broken and distance is not None and last_distance is not None):
                             length = metadata["manual_lfs_settings"].get("track_length", 0)
                             if ((length > 0 and last_distance > length * 0.8 and distance < length * 0.2) or
                                 (length <= 0 and last_distance > 100 and distance < 50)):
@@ -352,8 +356,9 @@ break_before=True 或 segment_index 改变表示不连续，不能跨段插值�
 没有零填充、插值、平滑或自动评分；记录频率不代表设备/游戏实际报告率。
 默认请求间隔 20ms，重复的源时间戳跳过，真实间隔请查看相邻行。
 
-lap_segment 只是本次记录的圈段。LFS 没有 InSim 官方计时，
-圈界由圈内距离回绕推断，传送、出站和倒车可能造成误判，不能据此确认有效完整圈。
+lap_segment 只是本次记录的圈段。LFS 的圈数和上一圈成绩来自 InSim；
+当前圈时由 OutSim 过线定位估算，精度受采样间隔影响，不代表 HLVC 有效性认证。
+没有 InSim 圈数时，圈界仍由距离回绕推断，传送、出站和倒车可能造成误判。
 其他游戏使用游戏圈数变化分段。每次记录的首尾圈均可能不完整。
 LFS 支持固定 1ff 扩展或旧版 OutSim，其他掩码不会被猜测解码。
 raw_* 列保留 LFS 协议轴；air_temperature 是胎内空气温度。
